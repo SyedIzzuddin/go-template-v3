@@ -14,6 +14,7 @@ type Config struct {
 	JWT      JWTConfig
 	Server   ServerConfig
 	Upload   UploadConfig
+	Email    EmailConfig
 }
 
 type AppConfig struct {
@@ -53,6 +54,16 @@ type UploadConfig struct {
 	BaseURL       string
 }
 
+type EmailConfig struct {
+	SMTPHost     string
+	SMTPPort     string
+	SMTPUsername string
+	SMTPPassword string
+	FromEmail    string
+	FromName     string
+	BaseURL      string
+}
+
 func Load() *Config {
 	return &Config{
 		App: AppConfig{
@@ -85,6 +96,15 @@ func Load() *Config {
 			MaxFileSize:  getEnvAsInt64("UPLOAD_MAX_FILE_SIZE", 10*1024*1024), // 10MB
 			AllowedTypes: []string{"image/jpeg", "image/png", "image/gif", "application/pdf", "text/plain"},
 			UploadPath:   getEnv("UPLOAD_PATH", "uploads"),
+			BaseURL:      getEnv("BASE_URL", "http://localhost:8080"),
+		},
+		Email: EmailConfig{
+			SMTPHost:     getEnv("SMTP_HOST", "smtp.gmail.com"),
+			SMTPPort:     getEnv("SMTP_PORT", "587"),
+			SMTPUsername: getEnv("SMTP_USERNAME", ""),
+			SMTPPassword: getEnv("SMTP_PASSWORD", ""),
+			FromEmail:    getEnv("SMTP_FROM_EMAIL", "noreply@go-template.com"),
+			FromName:     getEnv("SMTP_FROM_NAME", "Go Template"),
 			BaseURL:      getEnv("BASE_URL", "http://localhost:8080"),
 		},
 	}

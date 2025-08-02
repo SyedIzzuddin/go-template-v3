@@ -63,14 +63,38 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.getUserByEmailWithPasswordStmt, err = db.PrepareContext(ctx, getUserByEmailWithPassword); err != nil {
 		return nil, fmt.Errorf("error preparing query GetUserByEmailWithPassword: %w", err)
 	}
+	if q.getUserByPasswordResetTokenStmt, err = db.PrepareContext(ctx, getUserByPasswordResetToken); err != nil {
+		return nil, fmt.Errorf("error preparing query GetUserByPasswordResetToken: %w", err)
+	}
+	if q.getUserByVerificationTokenStmt, err = db.PrepareContext(ctx, getUserByVerificationToken); err != nil {
+		return nil, fmt.Errorf("error preparing query GetUserByVerificationToken: %w", err)
+	}
 	if q.listUsersStmt, err = db.PrepareContext(ctx, listUsers); err != nil {
 		return nil, fmt.Errorf("error preparing query ListUsers: %w", err)
+	}
+	if q.resetPasswordStmt, err = db.PrepareContext(ctx, resetPassword); err != nil {
+		return nil, fmt.Errorf("error preparing query ResetPassword: %w", err)
+	}
+	if q.updateEmailVerificationStmt, err = db.PrepareContext(ctx, updateEmailVerification); err != nil {
+		return nil, fmt.Errorf("error preparing query UpdateEmailVerification: %w", err)
+	}
+	if q.updateEmailVerificationTokenStmt, err = db.PrepareContext(ctx, updateEmailVerificationToken); err != nil {
+		return nil, fmt.Errorf("error preparing query UpdateEmailVerificationToken: %w", err)
 	}
 	if q.updateFileStmt, err = db.PrepareContext(ctx, updateFile); err != nil {
 		return nil, fmt.Errorf("error preparing query UpdateFile: %w", err)
 	}
+	if q.updatePasswordResetTokenStmt, err = db.PrepareContext(ctx, updatePasswordResetToken); err != nil {
+		return nil, fmt.Errorf("error preparing query UpdatePasswordResetToken: %w", err)
+	}
 	if q.updateUserStmt, err = db.PrepareContext(ctx, updateUser); err != nil {
 		return nil, fmt.Errorf("error preparing query UpdateUser: %w", err)
+	}
+	if q.updateVerificationTokenStmt, err = db.PrepareContext(ctx, updateVerificationToken); err != nil {
+		return nil, fmt.Errorf("error preparing query UpdateVerificationToken: %w", err)
+	}
+	if q.verifyEmailByTokenStmt, err = db.PrepareContext(ctx, verifyEmailByToken); err != nil {
+		return nil, fmt.Errorf("error preparing query VerifyEmailByToken: %w", err)
 	}
 	return &q, nil
 }
@@ -142,9 +166,34 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing getUserByEmailWithPasswordStmt: %w", cerr)
 		}
 	}
+	if q.getUserByPasswordResetTokenStmt != nil {
+		if cerr := q.getUserByPasswordResetTokenStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getUserByPasswordResetTokenStmt: %w", cerr)
+		}
+	}
+	if q.getUserByVerificationTokenStmt != nil {
+		if cerr := q.getUserByVerificationTokenStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getUserByVerificationTokenStmt: %w", cerr)
+		}
+	}
 	if q.listUsersStmt != nil {
 		if cerr := q.listUsersStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing listUsersStmt: %w", cerr)
+		}
+	}
+	if q.resetPasswordStmt != nil {
+		if cerr := q.resetPasswordStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing resetPasswordStmt: %w", cerr)
+		}
+	}
+	if q.updateEmailVerificationStmt != nil {
+		if cerr := q.updateEmailVerificationStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing updateEmailVerificationStmt: %w", cerr)
+		}
+	}
+	if q.updateEmailVerificationTokenStmt != nil {
+		if cerr := q.updateEmailVerificationTokenStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing updateEmailVerificationTokenStmt: %w", cerr)
 		}
 	}
 	if q.updateFileStmt != nil {
@@ -152,9 +201,24 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing updateFileStmt: %w", cerr)
 		}
 	}
+	if q.updatePasswordResetTokenStmt != nil {
+		if cerr := q.updatePasswordResetTokenStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing updatePasswordResetTokenStmt: %w", cerr)
+		}
+	}
 	if q.updateUserStmt != nil {
 		if cerr := q.updateUserStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing updateUserStmt: %w", cerr)
+		}
+	}
+	if q.updateVerificationTokenStmt != nil {
+		if cerr := q.updateVerificationTokenStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing updateVerificationTokenStmt: %w", cerr)
+		}
+	}
+	if q.verifyEmailByTokenStmt != nil {
+		if cerr := q.verifyEmailByTokenStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing verifyEmailByTokenStmt: %w", cerr)
 		}
 	}
 	return err
@@ -194,45 +258,61 @@ func (q *Queries) queryRow(ctx context.Context, stmt *sql.Stmt, query string, ar
 }
 
 type Queries struct {
-	db                             DBTX
-	tx                             *sql.Tx
-	countUsersStmt                 *sql.Stmt
-	createFileStmt                 *sql.Stmt
-	createUserStmt                 *sql.Stmt
-	createUserWithPasswordStmt     *sql.Stmt
-	deleteFileStmt                 *sql.Stmt
-	deleteUserStmt                 *sql.Stmt
-	getAllFilesStmt                *sql.Stmt
-	getAllUsersStmt                *sql.Stmt
-	getFileStmt                    *sql.Stmt
-	getFilesByUserStmt             *sql.Stmt
-	getUserStmt                    *sql.Stmt
-	getUserByEmailStmt             *sql.Stmt
-	getUserByEmailWithPasswordStmt *sql.Stmt
-	listUsersStmt                  *sql.Stmt
-	updateFileStmt                 *sql.Stmt
-	updateUserStmt                 *sql.Stmt
+	db                               DBTX
+	tx                               *sql.Tx
+	countUsersStmt                   *sql.Stmt
+	createFileStmt                   *sql.Stmt
+	createUserStmt                   *sql.Stmt
+	createUserWithPasswordStmt       *sql.Stmt
+	deleteFileStmt                   *sql.Stmt
+	deleteUserStmt                   *sql.Stmt
+	getAllFilesStmt                  *sql.Stmt
+	getAllUsersStmt                  *sql.Stmt
+	getFileStmt                      *sql.Stmt
+	getFilesByUserStmt               *sql.Stmt
+	getUserStmt                      *sql.Stmt
+	getUserByEmailStmt               *sql.Stmt
+	getUserByEmailWithPasswordStmt   *sql.Stmt
+	getUserByPasswordResetTokenStmt  *sql.Stmt
+	getUserByVerificationTokenStmt   *sql.Stmt
+	listUsersStmt                    *sql.Stmt
+	resetPasswordStmt                *sql.Stmt
+	updateEmailVerificationStmt      *sql.Stmt
+	updateEmailVerificationTokenStmt *sql.Stmt
+	updateFileStmt                   *sql.Stmt
+	updatePasswordResetTokenStmt     *sql.Stmt
+	updateUserStmt                   *sql.Stmt
+	updateVerificationTokenStmt      *sql.Stmt
+	verifyEmailByTokenStmt           *sql.Stmt
 }
 
 func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 	return &Queries{
-		db:                             tx,
-		tx:                             tx,
-		countUsersStmt:                 q.countUsersStmt,
-		createFileStmt:                 q.createFileStmt,
-		createUserStmt:                 q.createUserStmt,
-		createUserWithPasswordStmt:     q.createUserWithPasswordStmt,
-		deleteFileStmt:                 q.deleteFileStmt,
-		deleteUserStmt:                 q.deleteUserStmt,
-		getAllFilesStmt:                q.getAllFilesStmt,
-		getAllUsersStmt:                q.getAllUsersStmt,
-		getFileStmt:                    q.getFileStmt,
-		getFilesByUserStmt:             q.getFilesByUserStmt,
-		getUserStmt:                    q.getUserStmt,
-		getUserByEmailStmt:             q.getUserByEmailStmt,
-		getUserByEmailWithPasswordStmt: q.getUserByEmailWithPasswordStmt,
-		listUsersStmt:                  q.listUsersStmt,
-		updateFileStmt:                 q.updateFileStmt,
-		updateUserStmt:                 q.updateUserStmt,
+		db:                               tx,
+		tx:                               tx,
+		countUsersStmt:                   q.countUsersStmt,
+		createFileStmt:                   q.createFileStmt,
+		createUserStmt:                   q.createUserStmt,
+		createUserWithPasswordStmt:       q.createUserWithPasswordStmt,
+		deleteFileStmt:                   q.deleteFileStmt,
+		deleteUserStmt:                   q.deleteUserStmt,
+		getAllFilesStmt:                  q.getAllFilesStmt,
+		getAllUsersStmt:                  q.getAllUsersStmt,
+		getFileStmt:                      q.getFileStmt,
+		getFilesByUserStmt:               q.getFilesByUserStmt,
+		getUserStmt:                      q.getUserStmt,
+		getUserByEmailStmt:               q.getUserByEmailStmt,
+		getUserByEmailWithPasswordStmt:   q.getUserByEmailWithPasswordStmt,
+		getUserByPasswordResetTokenStmt:  q.getUserByPasswordResetTokenStmt,
+		getUserByVerificationTokenStmt:   q.getUserByVerificationTokenStmt,
+		listUsersStmt:                    q.listUsersStmt,
+		resetPasswordStmt:                q.resetPasswordStmt,
+		updateEmailVerificationStmt:      q.updateEmailVerificationStmt,
+		updateEmailVerificationTokenStmt: q.updateEmailVerificationTokenStmt,
+		updateFileStmt:                   q.updateFileStmt,
+		updatePasswordResetTokenStmt:     q.updatePasswordResetTokenStmt,
+		updateUserStmt:                   q.updateUserStmt,
+		updateVerificationTokenStmt:      q.updateVerificationTokenStmt,
+		verifyEmailByTokenStmt:           q.verifyEmailByTokenStmt,
 	}
 }

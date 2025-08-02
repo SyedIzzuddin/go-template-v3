@@ -14,6 +14,7 @@ import (
 	"go-template/internal/repository"
 	"go-template/internal/router"
 	"go-template/internal/service"
+	"go-template/pkg/email"
 	"go-template/pkg/jwt"
 	"go-template/pkg/storage"
 	"go-template/pkg/validator"
@@ -73,10 +74,20 @@ func NewServer() (*http.Server, error) {
 	userRepo := repository.NewUserRepository(db.DB)
 	fileRepo := repository.NewFileRepository(db.DB)
 
+	// Initialize email service
+	emailService := email.NewSMTPService(&email.Config{
+		SMTPHost:     cfg.Email.SMTPHost,
+		SMTPPort:     cfg.Email.SMTPPort,
+		SMTPUsername: cfg.Email.SMTPUsername,
+		SMTPPassword: cfg.Email.SMTPPassword,
+		FromEmail:    cfg.Email.FromEmail,
+		FromName:     cfg.Email.FromName,
+	})
+
 	// Initialize services
 	userService := service.NewUserService(userRepo)
 	fileService := service.NewFileService(fileRepo, fileStorage, cfg)
-	authService := service.NewAuthService(userRepo, jwtManager, cfg)
+	authService := service.NewAuthService(userRepo, jwtManager, emailService, cfg)
 
 	// Initialize handlers
 	userHandler := handler.NewUserHandler(userService, validatorInstance)

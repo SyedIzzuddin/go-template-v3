@@ -23,10 +23,16 @@ type Files struct {
 }
 
 type Users struct {
-	ID           int32        `db:"id" json:"id"`
-	Name         string       `db:"name" json:"name"`
-	Email        string       `db:"email" json:"email"`
-	CreatedAt    sql.NullTime `db:"created_at" json:"created_at"`
-	UpdatedAt    sql.NullTime `db:"updated_at" json:"updated_at"`
-	PasswordHash string       `db:"password_hash" json:"password_hash"`
+	ID                         int32          `db:"id" json:"id"`
+	Name                       string         `db:"name" json:"name"`
+	Email                      string         `db:"email" json:"email"`
+	CreatedAt                  sql.NullTime   `db:"created_at" json:"created_at"`
+	UpdatedAt                  sql.NullTime   `db:"updated_at" json:"updated_at"`
+	PasswordHash               string         `db:"password_hash" json:"password_hash"`
+	Role                       string         `db:"role" json:"role"`
+	EmailVerified              bool           `db:"email_verified" json:"email_verified"`
+	EmailVerificationToken     sql.NullString `db:"email_verification_token" json:"email_verification_token"`
+	EmailVerificationExpiresAt sql.NullTime   `db:"email_verification_expires_at" json:"email_verification_expires_at"`
+	PasswordResetToken         sql.NullString `db:"password_reset_token" json:"password_reset_token"`
+	PasswordResetExpiresAt     sql.NullTime   `db:"password_reset_expires_at" json:"password_reset_expires_at"`
 }

@@ -5,13 +5,16 @@ A production-ready, scalable Go REST API template built with modern best practic
 ## 🚀 Features
 
 - **JWT Authentication**: Complete auth system with access + refresh tokens, password hashing
+- **Email System**: SMTP email service with beautiful HTML templates for verification and password reset
+- **Email Verification**: Secure user email verification with token-based authentication
+- **Password Reset**: Complete password reset system with secure tokens and email delivery
 - **Clean Architecture**: Layered architecture with clear separation of concerns (handler → service → repository → entity)
 - **Echo Framework**: High-performance HTTP router and middleware
 - **PostgreSQL Integration**: Raw SQL with pgx driver and SQLC for type-safe queries
 - **Database Migrations**: Goose for schema versioning with automatic migration on startup
 - **File Management**: Secure file upload with validation and user-linked storage
 - **Structured Logging**: Zap logger with request tracing
-- **Security Features**: JWT auth, bcrypt hashing, rate limiting, CORS, input validation
+- **Security Features**: JWT auth, bcrypt hashing, rate limiting, CORS, input validation, email verification
 - **Testing**: Integration tests with Testcontainers
 - **Live Reload**: Air for development with hot reloading
 - **Docker Support**: Complete containerization with Docker Compose
@@ -257,6 +260,14 @@ SERVER_IDLE_TIMEOUT=60s
 UPLOAD_MAX_FILE_SIZE=10485760  # 10MB
 UPLOAD_PATH=uploads
 BASE_URL=http://localhost:8080
+
+# Email Configuration (SMTP)
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USERNAME=your-email@gmail.com
+SMTP_PASSWORD=your-app-password
+SMTP_FROM_EMAIL=your-email@gmail.com
+SMTP_FROM_NAME=Go Template API
 ```
 
 ## 📡 API Endpoints
@@ -270,6 +281,12 @@ BASE_URL=http://localhost:8080
 - `POST /api/v1/auth/register` - User registration with email/password
 - `POST /api/v1/auth/login` - User login with email/password
 - `POST /api/v1/auth/refresh` - Refresh access token using refresh token
+- `GET /api/v1/auth/verify-email` - Verify email address (supports both GET and POST)
+- `POST /api/v1/auth/verify-email` - Verify email address via API
+- `POST /api/v1/auth/resend-verification` - Resend email verification
+- `POST /api/v1/auth/forgot-password` - Request password reset email
+- `GET /api/v1/auth/reset-password` - Validate password reset token (from email links)
+- `POST /api/v1/auth/reset-password` - Reset password with token
 
 ### Authentication (Protected)
 
@@ -303,6 +320,8 @@ For detailed API documentation, see [docs/api/README.md](docs/api/README.md)
 ## 🔒 Security Features
 
 - **JWT Authentication**: Access + refresh token system with configurable expiration
+- **Email Verification**: Required email verification for sensitive operations with secure token system
+- **Password Reset Security**: Secure token-based password reset with 24-hour expiration
 - **Password Security**: Bcrypt hashing with cost 12 (OWASP 2025 recommended)
 - **Strong Password Requirements**: 8+ chars, uppercase, lowercase, numbers, special characters
 - **Protected Routes**: All user and file endpoints require valid JWT tokens
@@ -311,6 +330,7 @@ For detailed API documentation, see [docs/api/README.md](docs/api/README.md)
 - **File Upload Security**: File type validation, size limits, user-linked uploads
 - **CORS**: Configurable cross-origin resource sharing
 - **SQL Injection Protection**: Type-safe queries with SQLC
+- **Email Security**: Protection against email enumeration attacks
 - **Request Logging**: All requests logged with structured format and request IDs
 
 ## 🧪 Testing
@@ -367,10 +387,13 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 This template provides:
 
 - ✅ JWT Authentication with access + refresh tokens
+- ✅ Email verification system with secure tokens
+- ✅ Password reset functionality with email delivery
+- ✅ SMTP email service with beautiful HTML templates
 - ✅ RESTful API with user and file management
 - ✅ Clean, layered architecture
 - ✅ Database migrations and type-safe queries
-- ✅ Comprehensive middleware (logging, CORS, rate limiting, JWT auth)
+- ✅ Comprehensive middleware (logging, CORS, rate limiting, JWT auth, email verification)
 - ✅ Secure file upload with user authentication
 - ✅ Password security with bcrypt hashing
 - ✅ Structured logging with request tracing

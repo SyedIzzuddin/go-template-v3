@@ -6,6 +6,7 @@ package database
 
 import (
 	"context"
+	"database/sql"
 )
 
 type Querier interface {
@@ -22,9 +23,17 @@ type Querier interface {
 	GetUser(ctx context.Context, id int32) (Users, error)
 	GetUserByEmail(ctx context.Context, email string) (Users, error)
 	GetUserByEmailWithPassword(ctx context.Context, email string) (Users, error)
+	GetUserByPasswordResetToken(ctx context.Context, passwordResetToken sql.NullString) (Users, error)
+	GetUserByVerificationToken(ctx context.Context, emailVerificationToken sql.NullString) (Users, error)
 	ListUsers(ctx context.Context, arg ListUsersParams) ([]Users, error)
+	ResetPassword(ctx context.Context, arg ResetPasswordParams) error
+	UpdateEmailVerification(ctx context.Context, arg UpdateEmailVerificationParams) (Users, error)
+	UpdateEmailVerificationToken(ctx context.Context, arg UpdateEmailVerificationTokenParams) (Users, error)
 	UpdateFile(ctx context.Context, arg UpdateFileParams) (Files, error)
+	UpdatePasswordResetToken(ctx context.Context, arg UpdatePasswordResetTokenParams) error
 	UpdateUser(ctx context.Context, arg UpdateUserParams) (Users, error)
+	UpdateVerificationToken(ctx context.Context, arg UpdateVerificationTokenParams) error
+	VerifyEmailByToken(ctx context.Context, emailVerificationToken sql.NullString) error
 }
 
 var _ Querier = (*Queries)(nil)

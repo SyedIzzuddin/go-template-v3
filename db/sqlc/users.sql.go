@@ -7,6 +7,7 @@ package database
 
 import (
 	"context"
+	"database/sql"
 )
 
 const countUsers = `-- name: CountUsers :one
@@ -23,7 +24,7 @@ func (q *Queries) CountUsers(ctx context.Context) (int64, error) {
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (name, email)
 VALUES ($1, $2)
-RETURNING id, name, email, created_at, updated_at, password_hash
+RETURNING id, name, email, created_at, updated_at, password_hash, role, email_verified, email_verification_token, email_verification_expires_at, password_reset_token, password_reset_expires_at
 `
 
 type CreateUserParams struct {
@@ -41,24 +42,40 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (Users, 
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.PasswordHash,
+		&i.Role,
+		&i.EmailVerified,
+		&i.EmailVerificationToken,
+		&i.EmailVerificationExpiresAt,
+		&i.PasswordResetToken,
+		&i.PasswordResetExpiresAt,
 	)
 	return i, err
 }
 
 const createUserWithPassword = `-- name: CreateUserWithPassword :one
-INSERT INTO users (name, email, password_hash)
-VALUES ($1, $2, $3)
-RETURNING id, name, email, created_at, updated_at, password_hash
+INSERT INTO users (name, email, password_hash, role, email_verification_token, email_verification_expires_at)
+VALUES ($1, $2, $3, $4, $5, $6)
+RETURNING id, name, email, created_at, updated_at, password_hash, role, email_verified, email_verification_token, email_verification_expires_at, password_reset_token, password_reset_expires_at
 `
 
 type CreateUserWithPasswordParams struct {
-	Name         string `db:"name" json:"name"`
-	Email        string `db:"email" json:"email"`
-	PasswordHash string `db:"password_hash" json:"password_hash"`
+	Name                       string         `db:"name" json:"name"`
+	Email                      string         `db:"email" json:"email"`
+	PasswordHash               string         `db:"password_hash" json:"password_hash"`
+	Role                       string         `db:"role" json:"role"`
+	EmailVerificationToken     sql.NullString `db:"email_verification_token" json:"email_verification_token"`
+	EmailVerificationExpiresAt sql.NullTime   `db:"email_verification_expires_at" json:"email_verification_expires_at"`
 }
 
 func (q *Queries) CreateUserWithPassword(ctx context.Context, arg CreateUserWithPasswordParams) (Users, error) {
-	row := q.queryRow(ctx, q.createUserWithPasswordStmt, createUserWithPassword, arg.Name, arg.Email, arg.PasswordHash)
+	row := q.queryRow(ctx, q.createUserWithPasswordStmt, createUserWithPassword,
+		arg.Name,
+		arg.Email,
+		arg.PasswordHash,
+		arg.Role,
+		arg.EmailVerificationToken,
+		arg.EmailVerificationExpiresAt,
+	)
 	var i Users
 	err := row.Scan(
 		&i.ID,
@@ -67,6 +84,12 @@ func (q *Queries) CreateUserWithPassword(ctx context.Context, arg CreateUserWith
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.PasswordHash,
+		&i.Role,
+		&i.EmailVerified,
+		&i.EmailVerificationToken,
+		&i.EmailVerificationExpiresAt,
+		&i.PasswordResetToken,
+		&i.PasswordResetExpiresAt,
 	)
 	return i, err
 }
@@ -82,7 +105,7 @@ func (q *Queries) DeleteUser(ctx context.Context, id int32) error {
 }
 
 const getAllUsers = `-- name: GetAllUsers :many
-SELECT id, name, email, created_at, updated_at, password_hash FROM users
+SELECT id, name, email, created_at, updated_at, password_hash, role, email_verified, email_verification_token, email_verification_expires_at, password_reset_token, password_reset_expires_at FROM users
 ORDER BY created_at DESC
 `
 
@@ -102,6 +125,12 @@ func (q *Queries) GetAllUsers(ctx context.Context) ([]Users, error) {
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.PasswordHash,
+			&i.Role,
+			&i.EmailVerified,
+			&i.EmailVerificationToken,
+			&i.EmailVerificationExpiresAt,
+			&i.PasswordResetToken,
+			&i.PasswordResetExpiresAt,
 		); err != nil {
 			return nil, err
 		}
@@ -117,7 +146,7 @@ func (q *Queries) GetAllUsers(ctx context.Context) ([]Users, error) {
 }
 
 const getUser = `-- name: GetUser :one
-SELECT id, name, email, created_at, updated_at, password_hash FROM users
+SELECT id, name, email, created_at, updated_at, password_hash, role, email_verified, email_verification_token, email_verification_expires_at, password_reset_token, password_reset_expires_at FROM users
 WHERE id = $1 LIMIT 1
 `
 
@@ -131,12 +160,18 @@ func (q *Queries) GetUser(ctx context.Context, id int32) (Users, error) {
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.PasswordHash,
+		&i.Role,
+		&i.EmailVerified,
+		&i.EmailVerificationToken,
+		&i.EmailVerificationExpiresAt,
+		&i.PasswordResetToken,
+		&i.PasswordResetExpiresAt,
 	)
 	return i, err
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, name, email, created_at, updated_at, password_hash FROM users
+SELECT id, name, email, created_at, updated_at, password_hash, role, email_verified, email_verification_token, email_verification_expires_at, password_reset_token, password_reset_expires_at FROM users
 WHERE email = $1 LIMIT 1
 `
 
@@ -150,12 +185,18 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (Users, erro
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.PasswordHash,
+		&i.Role,
+		&i.EmailVerified,
+		&i.EmailVerificationToken,
+		&i.EmailVerificationExpiresAt,
+		&i.PasswordResetToken,
+		&i.PasswordResetExpiresAt,
 	)
 	return i, err
 }
 
 const getUserByEmailWithPassword = `-- name: GetUserByEmailWithPassword :one
-SELECT id, name, email, created_at, updated_at, password_hash FROM users
+SELECT id, name, email, created_at, updated_at, password_hash, role, email_verified, email_verification_token, email_verification_expires_at, password_reset_token, password_reset_expires_at FROM users
 WHERE email = $1 LIMIT 1
 `
 
@@ -169,12 +210,68 @@ func (q *Queries) GetUserByEmailWithPassword(ctx context.Context, email string) 
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.PasswordHash,
+		&i.Role,
+		&i.EmailVerified,
+		&i.EmailVerificationToken,
+		&i.EmailVerificationExpiresAt,
+		&i.PasswordResetToken,
+		&i.PasswordResetExpiresAt,
+	)
+	return i, err
+}
+
+const getUserByPasswordResetToken = `-- name: GetUserByPasswordResetToken :one
+SELECT id, name, email, created_at, updated_at, password_hash, role, email_verified, email_verification_token, email_verification_expires_at, password_reset_token, password_reset_expires_at FROM users
+WHERE password_reset_token = $1 LIMIT 1
+`
+
+func (q *Queries) GetUserByPasswordResetToken(ctx context.Context, passwordResetToken sql.NullString) (Users, error) {
+	row := q.queryRow(ctx, q.getUserByPasswordResetTokenStmt, getUserByPasswordResetToken, passwordResetToken)
+	var i Users
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Email,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.PasswordHash,
+		&i.Role,
+		&i.EmailVerified,
+		&i.EmailVerificationToken,
+		&i.EmailVerificationExpiresAt,
+		&i.PasswordResetToken,
+		&i.PasswordResetExpiresAt,
+	)
+	return i, err
+}
+
+const getUserByVerificationToken = `-- name: GetUserByVerificationToken :one
+SELECT id, name, email, created_at, updated_at, password_hash, role, email_verified, email_verification_token, email_verification_expires_at, password_reset_token, password_reset_expires_at FROM users
+WHERE email_verification_token = $1 LIMIT 1
+`
+
+func (q *Queries) GetUserByVerificationToken(ctx context.Context, emailVerificationToken sql.NullString) (Users, error) {
+	row := q.queryRow(ctx, q.getUserByVerificationTokenStmt, getUserByVerificationToken, emailVerificationToken)
+	var i Users
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Email,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.PasswordHash,
+		&i.Role,
+		&i.EmailVerified,
+		&i.EmailVerificationToken,
+		&i.EmailVerificationExpiresAt,
+		&i.PasswordResetToken,
+		&i.PasswordResetExpiresAt,
 	)
 	return i, err
 }
 
 const listUsers = `-- name: ListUsers :many
-SELECT id, name, email, created_at, updated_at, password_hash FROM users
+SELECT id, name, email, created_at, updated_at, password_hash, role, email_verified, email_verification_token, email_verification_expires_at, password_reset_token, password_reset_expires_at FROM users
 ORDER BY created_at DESC
 LIMIT $1 OFFSET $2
 `
@@ -200,6 +297,12 @@ func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]Users, 
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.PasswordHash,
+			&i.Role,
+			&i.EmailVerified,
+			&i.EmailVerificationToken,
+			&i.EmailVerificationExpiresAt,
+			&i.PasswordResetToken,
+			&i.PasswordResetExpiresAt,
 		); err != nil {
 			return nil, err
 		}
@@ -214,11 +317,109 @@ func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]Users, 
 	return items, nil
 }
 
+const resetPassword = `-- name: ResetPassword :exec
+UPDATE users
+SET password_hash = $2, password_reset_token = NULL, password_reset_expires_at = NULL, updated_at = NOW()
+WHERE password_reset_token = $1
+`
+
+type ResetPasswordParams struct {
+	PasswordResetToken sql.NullString `db:"password_reset_token" json:"password_reset_token"`
+	PasswordHash       string         `db:"password_hash" json:"password_hash"`
+}
+
+func (q *Queries) ResetPassword(ctx context.Context, arg ResetPasswordParams) error {
+	_, err := q.exec(ctx, q.resetPasswordStmt, resetPassword, arg.PasswordResetToken, arg.PasswordHash)
+	return err
+}
+
+const updateEmailVerification = `-- name: UpdateEmailVerification :one
+UPDATE users
+SET email_verified = $2, email_verification_token = NULL, email_verification_expires_at = NULL, updated_at = NOW()
+WHERE id = $1
+RETURNING id, name, email, created_at, updated_at, password_hash, role, email_verified, email_verification_token, email_verification_expires_at, password_reset_token, password_reset_expires_at
+`
+
+type UpdateEmailVerificationParams struct {
+	ID            int32 `db:"id" json:"id"`
+	EmailVerified bool  `db:"email_verified" json:"email_verified"`
+}
+
+func (q *Queries) UpdateEmailVerification(ctx context.Context, arg UpdateEmailVerificationParams) (Users, error) {
+	row := q.queryRow(ctx, q.updateEmailVerificationStmt, updateEmailVerification, arg.ID, arg.EmailVerified)
+	var i Users
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Email,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.PasswordHash,
+		&i.Role,
+		&i.EmailVerified,
+		&i.EmailVerificationToken,
+		&i.EmailVerificationExpiresAt,
+		&i.PasswordResetToken,
+		&i.PasswordResetExpiresAt,
+	)
+	return i, err
+}
+
+const updateEmailVerificationToken = `-- name: UpdateEmailVerificationToken :one
+UPDATE users
+SET email_verification_token = $2, email_verification_expires_at = $3, updated_at = NOW()
+WHERE id = $1
+RETURNING id, name, email, created_at, updated_at, password_hash, role, email_verified, email_verification_token, email_verification_expires_at, password_reset_token, password_reset_expires_at
+`
+
+type UpdateEmailVerificationTokenParams struct {
+	ID                         int32          `db:"id" json:"id"`
+	EmailVerificationToken     sql.NullString `db:"email_verification_token" json:"email_verification_token"`
+	EmailVerificationExpiresAt sql.NullTime   `db:"email_verification_expires_at" json:"email_verification_expires_at"`
+}
+
+func (q *Queries) UpdateEmailVerificationToken(ctx context.Context, arg UpdateEmailVerificationTokenParams) (Users, error) {
+	row := q.queryRow(ctx, q.updateEmailVerificationTokenStmt, updateEmailVerificationToken, arg.ID, arg.EmailVerificationToken, arg.EmailVerificationExpiresAt)
+	var i Users
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Email,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.PasswordHash,
+		&i.Role,
+		&i.EmailVerified,
+		&i.EmailVerificationToken,
+		&i.EmailVerificationExpiresAt,
+		&i.PasswordResetToken,
+		&i.PasswordResetExpiresAt,
+	)
+	return i, err
+}
+
+const updatePasswordResetToken = `-- name: UpdatePasswordResetToken :exec
+UPDATE users
+SET password_reset_token = $2, password_reset_expires_at = $3, updated_at = NOW()
+WHERE id = $1
+`
+
+type UpdatePasswordResetTokenParams struct {
+	ID                     int32          `db:"id" json:"id"`
+	PasswordResetToken     sql.NullString `db:"password_reset_token" json:"password_reset_token"`
+	PasswordResetExpiresAt sql.NullTime   `db:"password_reset_expires_at" json:"password_reset_expires_at"`
+}
+
+func (q *Queries) UpdatePasswordResetToken(ctx context.Context, arg UpdatePasswordResetTokenParams) error {
+	_, err := q.exec(ctx, q.updatePasswordResetTokenStmt, updatePasswordResetToken, arg.ID, arg.PasswordResetToken, arg.PasswordResetExpiresAt)
+	return err
+}
+
 const updateUser = `-- name: UpdateUser :one
 UPDATE users
 SET name = $2, updated_at = NOW()
 WHERE id = $1
-RETURNING id, name, email, created_at, updated_at, password_hash
+RETURNING id, name, email, created_at, updated_at, password_hash, role, email_verified, email_verification_token, email_verification_expires_at, password_reset_token, password_reset_expires_at
 `
 
 type UpdateUserParams struct {
@@ -236,6 +437,40 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (Users, 
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.PasswordHash,
+		&i.Role,
+		&i.EmailVerified,
+		&i.EmailVerificationToken,
+		&i.EmailVerificationExpiresAt,
+		&i.PasswordResetToken,
+		&i.PasswordResetExpiresAt,
 	)
 	return i, err
+}
+
+const updateVerificationToken = `-- name: UpdateVerificationToken :exec
+UPDATE users
+SET email_verification_token = $2, email_verification_expires_at = $3, updated_at = NOW()
+WHERE id = $1
+`
+
+type UpdateVerificationTokenParams struct {
+	ID                         int32          `db:"id" json:"id"`
+	EmailVerificationToken     sql.NullString `db:"email_verification_token" json:"email_verification_token"`
+	EmailVerificationExpiresAt sql.NullTime   `db:"email_verification_expires_at" json:"email_verification_expires_at"`
+}
+
+func (q *Queries) UpdateVerificationToken(ctx context.Context, arg UpdateVerificationTokenParams) error {
+	_, err := q.exec(ctx, q.updateVerificationTokenStmt, updateVerificationToken, arg.ID, arg.EmailVerificationToken, arg.EmailVerificationExpiresAt)
+	return err
+}
+
+const verifyEmailByToken = `-- name: VerifyEmailByToken :exec
+UPDATE users
+SET email_verified = true, email_verification_token = NULL, email_verification_expires_at = NULL, updated_at = NOW()
+WHERE email_verification_token = $1
+`
+
+func (q *Queries) VerifyEmailByToken(ctx context.Context, emailVerificationToken sql.NullString) error {
+	_, err := q.exec(ctx, q.verifyEmailByTokenStmt, verifyEmailByToken, emailVerificationToken)
+	return err
 }

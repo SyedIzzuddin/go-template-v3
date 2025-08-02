@@ -7,6 +7,7 @@ import (
 	"go-template/internal/database"
 	"go-template/internal/handler"
 	"go-template/internal/middleware"
+	"go-template/internal/repository"
 	"go-template/pkg/jwt"
 
 	"github.com/labstack/echo/v4"
@@ -29,6 +30,12 @@ func SetupRoutes(e *echo.Echo, db *database.DB, userHandler *handler.UserHandler
 	auth.POST("/register", authHandler.Register)
 	auth.POST("/login", authHandler.Login)
 	auth.POST("/refresh", authHandler.RefreshToken)
+	auth.GET("/verify-email", authHandler.VerifyEmail)
+	auth.POST("/verify-email", authHandler.VerifyEmail)
+	auth.POST("/resend-verification", authHandler.ResendVerificationEmail)
+	auth.POST("/forgot-password", authHandler.ForgotPassword)
+	auth.GET("/reset-password", authHandler.ResetPassword)
+	auth.POST("/reset-password", authHandler.ResetPassword)
 	
 	// Protected auth routes
 	authProtected := auth.Group("", middleware.AuthMiddleware(jwtManager))
@@ -42,8 +49,13 @@ func SetupRoutes(e *echo.Echo, db *database.DB, userHandler *handler.UserHandler
 	users.PUT("/:id", userHandler.UpdateUser)
 	users.DELETE("/:id", userHandler.DeleteUser)
 
-	// Protected file routes
-	files := api.Group("/files", middleware.AuthMiddleware(jwtManager))
+	// Initialize repository for email verification middleware
+	userRepo := repository.NewUserRepository(db.DB)
+
+	// Protected file routes with email verification warnings
+	files := api.Group("/files", 
+		middleware.AuthMiddleware(jwtManager),
+		middleware.EmailVerificationMiddleware(userRepo))
 	files.POST("/upload", fileHandler.UploadFile)
 	files.GET("", fileHandler.GetAllFiles)
 	files.GET("/my", fileHandler.GetMyFiles)

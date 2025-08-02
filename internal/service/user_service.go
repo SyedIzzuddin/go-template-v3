@@ -137,10 +137,12 @@ func (s *userService) GetAllUsers(ctx context.Context) ([]dto.UserResponse, erro
 
 func (s *userService) mapUserToResponse(user *entity.User) *dto.UserResponse {
 	return &dto.UserResponse{
-		ID:        user.ID,
-		Name:      user.Name,
-		Email:     user.Email,
-		CreatedAt: user.CreatedAt,
-		UpdatedAt: user.UpdatedAt,
+		ID:            user.ID,
+		Name:          user.Name,
+		Email:         user.Email,
+		Role:          user.Role,
+		EmailVerified: user.EmailVerified,
+		CreatedAt:     user.CreatedAt,
+		UpdatedAt:     user.UpdatedAt,
 	}
 }

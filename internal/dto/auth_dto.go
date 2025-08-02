@@ -38,9 +38,44 @@ type TokenResponse struct {
 
 // UserProfileResponse represents current user profile
 type UserProfileResponse struct {
-	ID        int       `json:"id"`
-	Name      string    `json:"name"`
-	Email     string    `json:"email"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID            int       `json:"id"`
+	Name          string    `json:"name"`
+	Email         string    `json:"email"`
+	Role          string    `json:"role"`
+	EmailVerified bool      `json:"email_verified"`
+	CreatedAt     time.Time `json:"created_at"`
+	UpdatedAt     time.Time `json:"updated_at"`
+}
+
+// VerifyEmailRequest represents email verification request
+type VerifyEmailRequest struct {
+	Token string `json:"token" validate:"required" form:"token"`
+}
+
+// ResendVerificationRequest represents resend verification email request
+type ResendVerificationRequest struct {
+	Email string `json:"email" validate:"required,email"`
+}
+
+// EmailVerificationResponse represents email verification response
+type EmailVerificationResponse struct {
+	Message string `json:"message"`
+	Success bool   `json:"success"`
+}
+
+// ForgotPasswordRequest represents forgot password request
+type ForgotPasswordRequest struct {
+	Email string `json:"email" validate:"required,email"`
+}
+
+// ResetPasswordRequest represents password reset request
+type ResetPasswordRequest struct {
+	Token    string `json:"token" validate:"required" form:"token"`
+	Password string `json:"password" validate:"required,min=8,max=128,password"`
+}
+
+// PasswordResetResponse represents password reset response
+type PasswordResetResponse struct {
+	Message string `json:"message"`
+	Success bool   `json:"success"`
 }
