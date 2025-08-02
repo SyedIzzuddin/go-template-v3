@@ -37,32 +37,48 @@ func SetupRoutes(e *echo.Echo, db *database.DB, userHandler *handler.UserHandler
 	auth.GET("/reset-password", authHandler.ResetPassword)
 	auth.POST("/reset-password", authHandler.ResetPassword)
 	
+	// Initialize repository for RBAC and email verification middleware
+	userRepo := repository.NewUserRepository(db.DB)
+
 	// Protected auth routes
 	authProtected := auth.Group("", middleware.AuthMiddleware(jwtManager))
 	authProtected.GET("/me", authHandler.GetProfile)
 
-	// Protected user routes
+	// Protected user routes with RBAC
 	users := api.Group("/users", middleware.AuthMiddleware(jwtManager))
-	users.POST("", userHandler.CreateUser)
-	users.GET("", userHandler.GetAllUsers)
-	users.GET("/:id", userHandler.GetUser)
-	users.PUT("/:id", userHandler.UpdateUser)
-	users.DELETE("/:id", userHandler.DeleteUser)
+	
+	// Admin-only user management
+	usersAdmin := users.Group("", middleware.AdminMiddleware(userRepo))
+	usersAdmin.POST("", userHandler.CreateUser)                    // Only admin can create users
+	usersAdmin.DELETE("/:id", userHandler.DeleteUser)              // Only admin can delete users
+	
+	// Moderator and admin can view all users
+	usersModerator := users.Group("", middleware.ModeratorOrAdminMiddleware(userRepo))
+	usersModerator.GET("", userHandler.GetAllUsers)                // Moderator+ can list all users
+	
+	// Self or admin access for individual user operations
+	usersSelf := users.Group("", middleware.SelfOrAdminMiddleware(userRepo))
+	usersSelf.GET("/:id", userHandler.GetUser)                     // User can view own profile, admin can view any
+	usersSelf.PUT("/:id", userHandler.UpdateUser)                  // User can update own profile, admin can update any
 
-	// Initialize repository for email verification middleware
-	userRepo := repository.NewUserRepository(db.DB)
-
-	// Protected file routes with email verification warnings
+	// Protected file routes with email verification warnings and RBAC
 	files := api.Group("/files", 
 		middleware.AuthMiddleware(jwtManager),
 		middleware.EmailVerificationMiddleware(userRepo))
-	files.POST("/upload", fileHandler.UploadFile)
-	files.GET("", fileHandler.GetAllFiles)
-	files.GET("/my", fileHandler.GetMyFiles)
-	files.GET("/:id", fileHandler.GetFile)
-	files.PUT("/:id", fileHandler.UpdateFile)
-	files.DELETE("/:id", fileHandler.DeleteFile)
-	files.GET("/:id/download", fileHandler.DownloadFile)
+	
+	// All authenticated users can upload and view their own files
+	files.POST("/upload", fileHandler.UploadFile)                   // Any authenticated user can upload
+	files.GET("/my", fileHandler.GetMyFiles)                       // Any authenticated user can view their own files
+	
+	// Moderator and admin can view all files
+	filesModerator := files.Group("", middleware.ModeratorOrAdminMiddleware(userRepo))
+	filesModerator.GET("", fileHandler.GetAllFiles)                // Moderator+ can list all files
+	filesModerator.DELETE("/:id", fileHandler.DeleteFile)          // Moderator+ can delete any file
+	
+	// Individual file operations - all authenticated users can access
+	files.GET("/:id", fileHandler.GetFile)                         // Any authenticated user can view file metadata
+	files.PUT("/:id", fileHandler.UpdateFile)                      // Any authenticated user can update (handler should check ownership)
+	files.GET("/:id/download", fileHandler.DownloadFile)           // Any authenticated user can download (handler should check permissions)
 
 	// Static file serving (public)
 	e.Static("/uploads", "uploads")
