@@ -33,8 +33,10 @@ type DatabaseConfig struct {
 }
 
 type JWTConfig struct {
-	Secret    string
-	ExpiresIn time.Duration
+	AccessSecret     string
+	RefreshSecret    string
+	AccessExpiresIn  time.Duration
+	RefreshExpiresIn time.Duration
 }
 
 type ServerConfig struct {
@@ -68,8 +70,10 @@ func Load() *Config {
 			AutoMigrate: getEnvAsBool("DB_AUTO_MIGRATE", true),
 		},
 		JWT: JWTConfig{
-			Secret:    getEnv("JWT_SECRET", "your-secret-key"),
-			ExpiresIn: getEnvAsDuration("JWT_EXPIRES_IN", "24h"),
+			AccessSecret:     getEnv("JWT_ACCESS_SECRET", "your-super-secret-access-key-change-this-in-production"),
+			RefreshSecret:    getEnv("JWT_REFRESH_SECRET", "your-super-secret-refresh-key-change-this-in-production"),
+			AccessExpiresIn:  getEnvAsDuration("JWT_ACCESS_EXPIRES_IN", "30m"),
+			RefreshExpiresIn: getEnvAsDuration("JWT_REFRESH_EXPIRES_IN", "168h"), // 7 days
 		},
 		Server: ServerConfig{
 			Port:         getEnvAsInt("PORT", 8080),

@@ -11,8 +11,10 @@ import (
 
 type UserRepository interface {
 	Create(ctx context.Context, name, email string) (*entity.User, error)
+	CreateWithPassword(ctx context.Context, name, email, passwordHash string) (*entity.User, error)
 	GetByID(ctx context.Context, id int) (*entity.User, error)
 	GetByEmail(ctx context.Context, email string) (*entity.User, error)
+	GetByEmailWithPassword(ctx context.Context, email string) (*entity.User, error)
 	Update(ctx context.Context, id int, name string) (*entity.User, error)
 	Delete(ctx context.Context, id int) error
 	GetAll(ctx context.Context) ([]entity.User, error)
@@ -40,11 +42,12 @@ func (r *userRepository) Create(ctx context.Context, name, email string) (*entit
 	}
 
 	return &entity.User{
-		ID:        int(createdUser.ID),
-		Name:      createdUser.Name,
-		Email:     createdUser.Email,
-		CreatedAt: createdUser.CreatedAt.Time,
-		UpdatedAt: createdUser.UpdatedAt.Time,
+		ID:           int(createdUser.ID),
+		Name:         createdUser.Name,
+		Email:        createdUser.Email,
+		PasswordHash: createdUser.PasswordHash,
+		CreatedAt:    createdUser.CreatedAt.Time,
+		UpdatedAt:    createdUser.UpdatedAt.Time,
 	}, nil
 }
 
@@ -55,11 +58,12 @@ func (r *userRepository) GetByID(ctx context.Context, id int) (*entity.User, err
 	}
 
 	return &entity.User{
-		ID:        int(user.ID),
-		Name:      user.Name,
-		Email:     user.Email,
-		CreatedAt: user.CreatedAt.Time,
-		UpdatedAt: user.UpdatedAt.Time,
+		ID:           int(user.ID),
+		Name:         user.Name,
+		Email:        user.Email,
+		PasswordHash: user.PasswordHash,
+		CreatedAt:    user.CreatedAt.Time,
+		UpdatedAt:    user.UpdatedAt.Time,
 	}, nil
 }
 
@@ -70,11 +74,12 @@ func (r *userRepository) GetByEmail(ctx context.Context, email string) (*entity.
 	}
 
 	return &entity.User{
-		ID:        int(user.ID),
-		Name:      user.Name,
-		Email:     user.Email,
-		CreatedAt: user.CreatedAt.Time,
-		UpdatedAt: user.UpdatedAt.Time,
+		ID:           int(user.ID),
+		Name:         user.Name,
+		Email:        user.Email,
+		PasswordHash: user.PasswordHash,
+		CreatedAt:    user.CreatedAt.Time,
+		UpdatedAt:    user.UpdatedAt.Time,
 	}, nil
 }
 
@@ -88,16 +93,53 @@ func (r *userRepository) Update(ctx context.Context, id int, name string) (*enti
 	}
 
 	return &entity.User{
-		ID:        int(updatedUser.ID),
-		Name:      updatedUser.Name,
-		Email:     updatedUser.Email,
-		CreatedAt: updatedUser.CreatedAt.Time,
-		UpdatedAt: updatedUser.UpdatedAt.Time,
+		ID:           int(updatedUser.ID),
+		Name:         updatedUser.Name,
+		Email:        updatedUser.Email,
+		PasswordHash: updatedUser.PasswordHash,
+		CreatedAt:    updatedUser.CreatedAt.Time,
+		UpdatedAt:    updatedUser.UpdatedAt.Time,
 	}, nil
 }
 
 func (r *userRepository) Delete(ctx context.Context, id int) error {
 	return r.queries.DeleteUser(ctx, int32(id))
+}
+
+func (r *userRepository) CreateWithPassword(ctx context.Context, name, email, passwordHash string) (*entity.User, error) {
+	createdUser, err := r.queries.CreateUserWithPassword(ctx, db.CreateUserWithPasswordParams{
+		Name:         name,
+		Email:        email,
+		PasswordHash: passwordHash,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &entity.User{
+		ID:           int(createdUser.ID),
+		Name:         createdUser.Name,
+		Email:        createdUser.Email,
+		PasswordHash: createdUser.PasswordHash,
+		CreatedAt:    createdUser.CreatedAt.Time,
+		UpdatedAt:    createdUser.UpdatedAt.Time,
+	}, nil
+}
+
+func (r *userRepository) GetByEmailWithPassword(ctx context.Context, email string) (*entity.User, error) {
+	user, err := r.queries.GetUserByEmailWithPassword(ctx, email)
+	if err != nil {
+		return nil, err
+	}
+
+	return &entity.User{
+		ID:           int(user.ID),
+		Name:         user.Name,
+		Email:        user.Email,
+		PasswordHash: user.PasswordHash,
+		CreatedAt:    user.CreatedAt.Time,
+		UpdatedAt:    user.UpdatedAt.Time,
+	}, nil
 }
 
 func (r *userRepository) GetAll(ctx context.Context) ([]entity.User, error) {
@@ -110,11 +152,12 @@ func (r *userRepository) GetAll(ctx context.Context) ([]entity.User, error) {
 	users := make([]entity.User, len(userList))
 	for i, dbUser := range userList {
 		users[i] = entity.User{
-			ID:        int(dbUser.ID),
-			Name:      dbUser.Name,
-			Email:     dbUser.Email,
-			CreatedAt: dbUser.CreatedAt.Time,
-			UpdatedAt: dbUser.UpdatedAt.Time,
+			ID:           int(dbUser.ID),
+			Name:         dbUser.Name,
+			Email:        dbUser.Email,
+			PasswordHash: dbUser.PasswordHash,
+			CreatedAt:    dbUser.CreatedAt.Time,
+			UpdatedAt:    dbUser.UpdatedAt.Time,
 		}
 	}
 

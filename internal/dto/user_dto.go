@@ -57,6 +57,8 @@ func getValidationMessage(err validator.FieldError) string {
 		return err.Field() + " must be at most " + err.Param() + " characters"
 	case "oneof":
 		return err.Field() + " must be one of: " + err.Param()
+	case "password":
+		return err.Field() + " must be at least 8 characters and contain uppercase, lowercase, number, and special character"
 	default:
 		return err.Field() + " is invalid"
 	}

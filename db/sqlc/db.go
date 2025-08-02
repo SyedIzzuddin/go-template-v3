@@ -33,6 +33,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.createUserStmt, err = db.PrepareContext(ctx, createUser); err != nil {
 		return nil, fmt.Errorf("error preparing query CreateUser: %w", err)
 	}
+	if q.createUserWithPasswordStmt, err = db.PrepareContext(ctx, createUserWithPassword); err != nil {
+		return nil, fmt.Errorf("error preparing query CreateUserWithPassword: %w", err)
+	}
 	if q.deleteFileStmt, err = db.PrepareContext(ctx, deleteFile); err != nil {
 		return nil, fmt.Errorf("error preparing query DeleteFile: %w", err)
 	}
@@ -56,6 +59,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	}
 	if q.getUserByEmailStmt, err = db.PrepareContext(ctx, getUserByEmail); err != nil {
 		return nil, fmt.Errorf("error preparing query GetUserByEmail: %w", err)
+	}
+	if q.getUserByEmailWithPasswordStmt, err = db.PrepareContext(ctx, getUserByEmailWithPassword); err != nil {
+		return nil, fmt.Errorf("error preparing query GetUserByEmailWithPassword: %w", err)
 	}
 	if q.listUsersStmt, err = db.PrepareContext(ctx, listUsers); err != nil {
 		return nil, fmt.Errorf("error preparing query ListUsers: %w", err)
@@ -84,6 +90,11 @@ func (q *Queries) Close() error {
 	if q.createUserStmt != nil {
 		if cerr := q.createUserStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing createUserStmt: %w", cerr)
+		}
+	}
+	if q.createUserWithPasswordStmt != nil {
+		if cerr := q.createUserWithPasswordStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing createUserWithPasswordStmt: %w", cerr)
 		}
 	}
 	if q.deleteFileStmt != nil {
@@ -124,6 +135,11 @@ func (q *Queries) Close() error {
 	if q.getUserByEmailStmt != nil {
 		if cerr := q.getUserByEmailStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getUserByEmailStmt: %w", cerr)
+		}
+	}
+	if q.getUserByEmailWithPasswordStmt != nil {
+		if cerr := q.getUserByEmailWithPasswordStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getUserByEmailWithPasswordStmt: %w", cerr)
 		}
 	}
 	if q.listUsersStmt != nil {
@@ -178,41 +194,45 @@ func (q *Queries) queryRow(ctx context.Context, stmt *sql.Stmt, query string, ar
 }
 
 type Queries struct {
-	db                 DBTX
-	tx                 *sql.Tx
-	countUsersStmt     *sql.Stmt
-	createFileStmt     *sql.Stmt
-	createUserStmt     *sql.Stmt
-	deleteFileStmt     *sql.Stmt
-	deleteUserStmt     *sql.Stmt
-	getAllFilesStmt    *sql.Stmt
-	getAllUsersStmt    *sql.Stmt
-	getFileStmt        *sql.Stmt
-	getFilesByUserStmt *sql.Stmt
-	getUserStmt        *sql.Stmt
-	getUserByEmailStmt *sql.Stmt
-	listUsersStmt      *sql.Stmt
-	updateFileStmt     *sql.Stmt
-	updateUserStmt     *sql.Stmt
+	db                             DBTX
+	tx                             *sql.Tx
+	countUsersStmt                 *sql.Stmt
+	createFileStmt                 *sql.Stmt
+	createUserStmt                 *sql.Stmt
+	createUserWithPasswordStmt     *sql.Stmt
+	deleteFileStmt                 *sql.Stmt
+	deleteUserStmt                 *sql.Stmt
+	getAllFilesStmt                *sql.Stmt
+	getAllUsersStmt                *sql.Stmt
+	getFileStmt                    *sql.Stmt
+	getFilesByUserStmt             *sql.Stmt
+	getUserStmt                    *sql.Stmt
+	getUserByEmailStmt             *sql.Stmt
+	getUserByEmailWithPasswordStmt *sql.Stmt
+	listUsersStmt                  *sql.Stmt
+	updateFileStmt                 *sql.Stmt
+	updateUserStmt                 *sql.Stmt
 }
 
 func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 	return &Queries{
-		db:                 tx,
-		tx:                 tx,
-		countUsersStmt:     q.countUsersStmt,
-		createFileStmt:     q.createFileStmt,
-		createUserStmt:     q.createUserStmt,
-		deleteFileStmt:     q.deleteFileStmt,
-		deleteUserStmt:     q.deleteUserStmt,
-		getAllFilesStmt:    q.getAllFilesStmt,
-		getAllUsersStmt:    q.getAllUsersStmt,
-		getFileStmt:        q.getFileStmt,
-		getFilesByUserStmt: q.getFilesByUserStmt,
-		getUserStmt:        q.getUserStmt,
-		getUserByEmailStmt: q.getUserByEmailStmt,
-		listUsersStmt:      q.listUsersStmt,
-		updateFileStmt:     q.updateFileStmt,
-		updateUserStmt:     q.updateUserStmt,
+		db:                             tx,
+		tx:                             tx,
+		countUsersStmt:                 q.countUsersStmt,
+		createFileStmt:                 q.createFileStmt,
+		createUserStmt:                 q.createUserStmt,
+		createUserWithPasswordStmt:     q.createUserWithPasswordStmt,
+		deleteFileStmt:                 q.deleteFileStmt,
+		deleteUserStmt:                 q.deleteUserStmt,
+		getAllFilesStmt:                q.getAllFilesStmt,
+		getAllUsersStmt:                q.getAllUsersStmt,
+		getFileStmt:                    q.getFileStmt,
+		getFilesByUserStmt:             q.getFilesByUserStmt,
+		getUserStmt:                    q.getUserStmt,
+		getUserByEmailStmt:             q.getUserByEmailStmt,
+		getUserByEmailWithPasswordStmt: q.getUserByEmailWithPasswordStmt,
+		listUsersStmt:                  q.listUsersStmt,
+		updateFileStmt:                 q.updateFileStmt,
+		updateUserStmt:                 q.updateUserStmt,
 	}
 }

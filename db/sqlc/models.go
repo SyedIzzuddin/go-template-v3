@@ -23,9 +23,10 @@ type Files struct {
 }
 
 type Users struct {
-	ID        int32        `db:"id" json:"id"`
-	Name      string       `db:"name" json:"name"`
-	Email     string       `db:"email" json:"email"`
-	CreatedAt sql.NullTime `db:"created_at" json:"created_at"`
-	UpdatedAt sql.NullTime `db:"updated_at" json:"updated_at"`
+	ID           int32        `db:"id" json:"id"`
+	Name         string       `db:"name" json:"name"`
+	Email        string       `db:"email" json:"email"`
+	CreatedAt    sql.NullTime `db:"created_at" json:"created_at"`
+	UpdatedAt    sql.NullTime `db:"updated_at" json:"updated_at"`
+	PasswordHash string       `db:"password_hash" json:"password_hash"`
 }
