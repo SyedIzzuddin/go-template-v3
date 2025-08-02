@@ -1,16 +1,17 @@
 # Go REST API Template
 
-A production-ready, scalable Go REST API template built with modern best practices. This template provides a solid foundation for building RESTful APIs with user management, file upload capabilities, and comprehensive tooling for rapid development.
+A production-ready, scalable Go REST API template built with modern best practices. This template provides a solid foundation for building RESTful APIs with JWT authentication, user management, file upload capabilities, and comprehensive tooling for rapid development.
 
 ## 🚀 Features
 
+- **JWT Authentication**: Complete auth system with access + refresh tokens, password hashing
 - **Clean Architecture**: Layered architecture with clear separation of concerns (handler → service → repository → entity)
 - **Echo Framework**: High-performance HTTP router and middleware
 - **PostgreSQL Integration**: Raw SQL with pgx driver and SQLC for type-safe queries
 - **Database Migrations**: Goose for schema versioning with automatic migration on startup
-- **File Management**: Secure file upload with validation and storage
+- **File Management**: Secure file upload with validation and user-linked storage
 - **Structured Logging**: Zap logger with request tracing
-- **Security Features**: Rate limiting, CORS, input validation
+- **Security Features**: JWT auth, bcrypt hashing, rate limiting, CORS, input validation
 - **Testing**: Integration tests with Testcontainers
 - **Live Reload**: Air for development with hot reloading
 - **Docker Support**: Complete containerization with Docker Compose
@@ -26,16 +27,18 @@ A production-ready, scalable Go REST API template built with modern best practic
 │   ├── entity/                 # Domain entities (User, File)
 │   ├── handler/                # HTTP handlers (controllers)
 │   ├── logger/                 # Structured logging configuration
-│   ├── middleware/             # Custom middleware (rate limiting, CORS, logging)
+│   ├── middleware/             # Custom middleware (rate limiting, CORS, logging, JWT auth)
+│   ├── migration/              # Database migration utilities
 │   ├── repository/             # Data access layer with raw SQL
 │   ├── router/                 # Route definitions
 │   ├── server/                 # Server initialization and configuration
 │   ├── service/                # Business logic layer
 │   └── utils/                  # Utility functions
 ├── pkg/
+│   ├── jwt/                    # JWT token management utilities
 │   ├── response/               # Standardized API responses
 │   ├── storage/                # File storage utilities
-│   └── validator/              # Request validation
+│   └── validator/              # Request validation with custom rules
 ├── db/
 │   ├── migrations/             # Goose migration files
 │   ├── queries/                # SQL query files for SQLC
@@ -229,31 +232,50 @@ APP_ENV=development
 APP_DEBUG=true
 PORT=8080
 
+# JWT Authentication
+JWT_ACCESS_SECRET=your-super-secret-access-key-change-this-in-production
+JWT_REFRESH_SECRET=your-super-secret-refresh-key-change-this-in-production
+JWT_ACCESS_EXPIRES_IN=30m
+JWT_REFRESH_EXPIRES_IN=168h
+
 # Database
 BLUEPRINT_DB_HOST=localhost
 BLUEPRINT_DB_PORT=5432
 BLUEPRINT_DB_DATABASE=go_template
 BLUEPRINT_DB_USERNAME=postgres
 BLUEPRINT_DB_PASSWORD=password
+BLUEPRINT_DB_SCHEMA=public
 DB_AUTO_MIGRATE=true
+DATABASE_URL=postgres://postgres:password@localhost:5432/go_template?sslmode=disable
+
+# Server Configuration
+SERVER_READ_TIMEOUT=10s
+SERVER_WRITE_TIMEOUT=30s
+SERVER_IDLE_TIMEOUT=60s
 
 # File Upload
 UPLOAD_MAX_FILE_SIZE=10485760  # 10MB
 UPLOAD_PATH=uploads
 BASE_URL=http://localhost:8080
-
-# JWT (for future authentication)
-JWT_SECRET=your-super-secret-jwt-key
-JWT_EXPIRES_IN=24h
 ```
 
 ## 📡 API Endpoints
 
-### Health Check
+### Health Check (Public)
 
 - `GET /api/v1/health` - API health status with database connectivity
 
-### User Management
+### Authentication (Public)
+
+- `POST /api/v1/auth/register` - User registration with email/password
+- `POST /api/v1/auth/login` - User login with email/password
+- `POST /api/v1/auth/refresh` - Refresh access token using refresh token
+
+### Authentication (Protected)
+
+- `GET /api/v1/auth/me` - Get current user profile
+
+### User Management (Protected - Requires JWT)
 
 - `POST /api/v1/users` - Create a new user
 - `GET /api/v1/users` - List users (with pagination)
@@ -261,27 +283,35 @@ JWT_EXPIRES_IN=24h
 - `PUT /api/v1/users/:id` - Update user
 - `DELETE /api/v1/users/:id` - Delete user
 
-### File Management
+### File Management (Protected - Requires JWT)
 
-- `POST /api/v1/files/upload` - Upload files
+- `POST /api/v1/files/upload` - Upload files (auto-linked to authenticated user)
 - `GET /api/v1/files` - List all files (with pagination)
 - `GET /api/v1/files/my` - List current user's files
 - `GET /api/v1/files/:id` - Get file metadata
 - `PUT /api/v1/files/:id` - Update file metadata
 - `DELETE /api/v1/files/:id` - Delete file
 - `GET /api/v1/files/:id/download` - Download file
+
+### Static Files (Public)
+
 - `GET /files/:filename` - Serve file directly
+- `GET /uploads/*` - Static file serving
 
 For detailed API documentation, see [docs/api/README.md](docs/api/README.md)
 
 ## 🔒 Security Features
 
+- **JWT Authentication**: Access + refresh token system with configurable expiration
+- **Password Security**: Bcrypt hashing with cost 12 (OWASP 2025 recommended)
+- **Strong Password Requirements**: 8+ chars, uppercase, lowercase, numbers, special characters
+- **Protected Routes**: All user and file endpoints require valid JWT tokens
 - **Rate Limiting**: 100 requests per minute per IP
-- **Input Validation**: Comprehensive request validation with go-playground/validator
-- **File Upload Security**: File type validation, size limits, secure storage
+- **Input Validation**: Comprehensive request validation with custom password rules
+- **File Upload Security**: File type validation, size limits, user-linked uploads
 - **CORS**: Configurable cross-origin resource sharing
 - **SQL Injection Protection**: Type-safe queries with SQLC
-- **Request Logging**: All requests logged with unique request IDs
+- **Request Logging**: All requests logged with structured format and request IDs
 
 ## 🧪 Testing
 
@@ -336,11 +366,13 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 This template provides:
 
+- ✅ JWT Authentication with access + refresh tokens
 - ✅ RESTful API with user and file management
 - ✅ Clean, layered architecture
 - ✅ Database migrations and type-safe queries
-- ✅ Comprehensive middleware (logging, CORS, rate limiting)
-- ✅ File upload with validation
+- ✅ Comprehensive middleware (logging, CORS, rate limiting, JWT auth)
+- ✅ Secure file upload with user authentication
+- ✅ Password security with bcrypt hashing
 - ✅ Structured logging with request tracing
 - ✅ Integration testing setup
 - ✅ Development tools (live reload, testing)

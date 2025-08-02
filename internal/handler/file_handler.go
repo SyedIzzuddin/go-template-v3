@@ -28,10 +28,10 @@ func NewFileHandler(fileService service.FileService, validator *validator.Valida
 
 func (h *FileHandler) UploadFile(c echo.Context) error {
 	requestID := c.Response().Header().Get(echo.HeaderXRequestID)
-	logger.Info("UploadFile request started", zap.String("request_id", requestID))
-
-	// TODO: Make sure to edit this part and use the correct method to get the user id
-	userID := 1
+	userID := c.Get("user_id").(int) // Set by auth middleware
+	logger.Info("UploadFile request started", 
+		zap.String("request_id", requestID), 
+		zap.Int("user_id", userID))
 
 	// Get file from form
 	file, err := c.FormFile("file")
@@ -86,7 +86,7 @@ func (h *FileHandler) GetFile(c echo.Context) error {
 
 func (h *FileHandler) GetMyFiles(c echo.Context) error {
 	requestID := c.Response().Header().Get(echo.HeaderXRequestID)
-	userID := 1 // Hardcoded for demo purposes
+	userID := c.Get("user_id").(int) // Set by auth middleware
 	logger.Info("GetMyFiles request started", zap.String("request_id", requestID), zap.Int("user_id", userID))
 
 	files, err := h.fileService.GetFilesByUserID(c.Request().Context(), userID)

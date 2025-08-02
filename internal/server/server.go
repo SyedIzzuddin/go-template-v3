@@ -14,6 +14,7 @@ import (
 	"go-template/internal/repository"
 	"go-template/internal/router"
 	"go-template/internal/service"
+	"go-template/pkg/jwt"
 	"go-template/pkg/storage"
 	"go-template/pkg/validator"
 
@@ -61,6 +62,12 @@ func NewServer() (*http.Server, error) {
 	// Initialize dependencies
 	fileStorage := storage.NewFileStorage()
 	validatorInstance := validator.New()
+	jwtManager := jwt.NewJWTManager(
+		cfg.JWT.AccessSecret,
+		cfg.JWT.RefreshSecret,
+		cfg.JWT.AccessExpiresIn,
+		cfg.JWT.RefreshExpiresIn,
+	)
 
 	// Initialize repositories
 	userRepo := repository.NewUserRepository(db.DB)
@@ -69,10 +76,12 @@ func NewServer() (*http.Server, error) {
 	// Initialize services
 	userService := service.NewUserService(userRepo)
 	fileService := service.NewFileService(fileRepo, fileStorage, cfg)
+	authService := service.NewAuthService(userRepo, jwtManager, cfg)
 
 	// Initialize handlers
 	userHandler := handler.NewUserHandler(userService, validatorInstance)
 	fileHandler := handler.NewFileHandler(fileService, validatorInstance)
+	authHandler := handler.NewAuthHandler(authService, validatorInstance)
 
 	// Initialize middleware
 	rateLimiter := middleware.NewRateLimiter(100, time.Minute) // 100 requests per minute
@@ -85,7 +94,7 @@ func NewServer() (*http.Server, error) {
 	e.Use(middleware.RateLimitMiddleware(rateLimiter))
 
 	// Setup routes
-	router.SetupRoutes(e, db, userHandler, fileHandler)
+	router.SetupRoutes(e, db, userHandler, fileHandler, authHandler, jwtManager)
 
 	// Create HTTP server
 	httpServer := &http.Server{
