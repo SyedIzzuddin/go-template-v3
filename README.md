@@ -5,6 +5,7 @@ A production-ready, scalable Go REST API template built with modern best practic
 ## 🚀 Features
 
 - **JWT Authentication**: Complete auth system with access + refresh tokens, password hashing
+- **Role-Based Access Control (RBAC)**: Three-tier role system (admin, moderator, user)
 - **Email System**: SMTP email service with beautiful HTML templates for verification and password reset
 - **Email Verification**: Secure user email verification with token-based authentication
 - **Password Reset**: Complete password reset system with secure tokens and email delivery
@@ -14,7 +15,7 @@ A production-ready, scalable Go REST API template built with modern best practic
 - **Database Migrations**: Goose for schema versioning with automatic migration on startup
 - **File Management**: Secure file upload with validation and user-linked storage
 - **Structured Logging**: Zap logger with request tracing
-- **Security Features**: JWT auth, bcrypt hashing, rate limiting, CORS, input validation, email verification
+- **Security Features**: JWT auth, RBAC authorization, bcrypt hashing, rate limiting, CORS, input validation, email verification
 - **Testing**: Integration tests with Testcontainers
 - **Live Reload**: Air for development with hot reloading
 - **Docker Support**: Complete containerization with Docker Compose
@@ -30,7 +31,7 @@ A production-ready, scalable Go REST API template built with modern best practic
 │   ├── entity/                 # Domain entities (User, File)
 │   ├── handler/                # HTTP handlers (controllers)
 │   ├── logger/                 # Structured logging configuration
-│   ├── middleware/             # Custom middleware (rate limiting, CORS, logging, JWT auth)
+│   ├── middleware/             # Custom middleware (rate limiting, CORS, logging, JWT auth, RBAC)
 │   ├── migration/              # Database migration utilities
 │   ├── repository/             # Data access layer with raw SQL
 │   ├── router/                 # Route definitions
@@ -292,23 +293,23 @@ SMTP_FROM_NAME=Go Template API
 
 - `GET /api/v1/auth/me` - Get current user profile
 
-### User Management (Protected - Requires JWT)
+### User Management (RBAC Protected)
 
-- `POST /api/v1/users` - Create a new user
-- `GET /api/v1/users` - List users (with pagination)
-- `GET /api/v1/users/:id` - Get user by ID
-- `PUT /api/v1/users/:id` - Update user
-- `DELETE /api/v1/users/:id` - Delete user
+- `POST /api/v1/users` - Create user (Admin only)
+- `GET /api/v1/users` - List all users (Moderator+ only)
+- `GET /api/v1/users/:id` - Get user by ID (Own profile or Admin)
+- `PUT /api/v1/users/:id` - Update user (Own profile or Admin)
+- `DELETE /api/v1/users/:id` - Delete user (Admin only)
 
-### File Management (Protected - Requires JWT)
+### File Management (RBAC Protected)
 
-- `POST /api/v1/files/upload` - Upload files (auto-linked to authenticated user)
-- `GET /api/v1/files` - List all files (with pagination)
-- `GET /api/v1/files/my` - List current user's files
-- `GET /api/v1/files/:id` - Get file metadata
-- `PUT /api/v1/files/:id` - Update file metadata
-- `DELETE /api/v1/files/:id` - Delete file
-- `GET /api/v1/files/:id/download` - Download file
+- `POST /api/v1/files/upload` - Upload files (All authenticated users)
+- `GET /api/v1/files` - List all files (Moderator+ only)
+- `GET /api/v1/files/my` - List current user's files (All authenticated users)
+- `GET /api/v1/files/:id` - Get file metadata (All authenticated users)
+- `PUT /api/v1/files/:id` - Update file metadata (All authenticated users)
+- `DELETE /api/v1/files/:id` - Delete file (Moderator+ only)
+- `GET /api/v1/files/:id/download` - Download file (All authenticated users)
 
 ### Static Files (Public)
 
@@ -320,11 +321,12 @@ For detailed API documentation, see [docs/api/README.md](docs/api/README.md)
 ## 🔒 Security Features
 
 - **JWT Authentication**: Access + refresh token system with configurable expiration
+- **Role-Based Access Control**: Three-tier role system (admin, moderator, user)
 - **Email Verification**: Required email verification for sensitive operations with secure token system
 - **Password Reset Security**: Secure token-based password reset with 24-hour expiration
 - **Password Security**: Bcrypt hashing with cost 12 (OWASP 2025 recommended)
 - **Strong Password Requirements**: 8+ chars, uppercase, lowercase, numbers, special characters
-- **Protected Routes**: All user and file endpoints require valid JWT tokens
+- **Protected Routes**: All user and file endpoints require valid JWT tokens with role-based access
 - **Rate Limiting**: 100 requests per minute per IP
 - **Input Validation**: Comprehensive request validation with custom password rules
 - **File Upload Security**: File type validation, size limits, user-linked uploads
@@ -387,13 +389,14 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 This template provides:
 
 - ✅ JWT Authentication with access + refresh tokens
+- ✅ Role-Based Access Control (RBAC) with admin, moderator, and user roles
 - ✅ Email verification system with secure tokens
 - ✅ Password reset functionality with email delivery
 - ✅ SMTP email service with beautiful HTML templates
 - ✅ RESTful API with user and file management
 - ✅ Clean, layered architecture
 - ✅ Database migrations and type-safe queries
-- ✅ Comprehensive middleware (logging, CORS, rate limiting, JWT auth, email verification)
+- ✅ Comprehensive middleware (logging, CORS, rate limiting, JWT auth, RBAC, email verification)
 - ✅ Secure file upload with user authentication
 - ✅ Password security with bcrypt hashing
 - ✅ Structured logging with request tracing
