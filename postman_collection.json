@@ -1,0 +1,326 @@
+{
+	"info": {
+		"_postman_id": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
+		"name": "Go Template API",
+		"description": "A collection of API endpoints for the Go project.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Health Check",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/api/v1/health",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"health"
+					]
+				},
+				"description": "Checks the health of the API and its database connection."
+			},
+			"response": []
+		},
+		{
+			"name": "Users",
+			"item": [
+				{
+					"name": "Create a New User",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"John Doe\",\n  \"email\": \"john.doe@example.com\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/users",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users"
+							]
+						},
+						"description": "Creates a new user with a name and email."
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Users",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/users",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users"
+							]
+						},
+						"description": "Retrieves a list of all users."
+					},
+					"response": []
+				},
+				{
+					"name": "Get User by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/users/1",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"1"
+							]
+						},
+						"description": "Retrieves a single user by their unique ID."
+					},
+					"response": []
+				},
+				{
+					"name": "Update User by ID",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"John Doe Updated\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/users/1",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"1"
+							]
+						},
+						"description": "Updates the details of an existing user."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete User by ID",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/users/1",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"1"
+							]
+						},
+						"description": "Deletes a user by their unique ID."
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints for managing users."
+		},
+		{
+			"name": "Files",
+			"item": [
+				{
+					"name": "Upload a File",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "file",
+									"type": "file",
+									"src": []
+								},
+								{
+									"key": "description",
+									"value": "This is a test file upload.",
+									"type": "text"
+								},
+								{
+									"key": "category",
+									"value": "testing",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/files/upload",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"files",
+								"upload"
+							]
+						},
+						"description": "Uploads a file with an optional description and category. In Postman, you must select a file from your local machine for the 'file' key."
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Files",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/files",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"files"
+							]
+						},
+						"description": "Retrieves a list of all uploaded files."
+					},
+					"response": []
+				},
+				{
+					"name": "Get File by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/files/1",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"files",
+								"1"
+							]
+						},
+						"description": "Retrieves metadata for a single file by its ID."
+					},
+					"response": []
+				},
+				{
+					"name": "Download File by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/files/1/download",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"files",
+								"1",
+								"download"
+							]
+						},
+						"description": "Downloads the physical file by its ID. In Postman, use the 'Send and Download' button to save the file."
+					},
+					"response": []
+				},
+				{
+					"name": "Update File by ID",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"type": "text",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"description\": \"An updated description for the file.\",\n    \"category\": \"updated\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/files/1",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"files",
+								"1"
+							]
+						},
+						"description": "Updates the metadata (description, category) of a file."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete File by ID",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/files/1",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"files",
+								"1"
+							]
+						},
+						"description": "Deletes a file's metadata and the physical file from storage."
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints for managing files."
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:8080",
+			"type": "string"
+		}
+	]
+}

@@ -1,0 +1,8 @@
+# goose.yml
+
+db:
+  driver: postgres
+  open: "user=postgres password=password dbname=go-template sslmode=disable"
+  import: "github.com/lib/pq"
+  dir: "db/migrations"
+  table: "goose_db_version"

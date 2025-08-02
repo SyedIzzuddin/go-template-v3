@@ -5,13 +5,12 @@ all: build test
 
 build:
 	@echo "Building..."
-	
-	
 	@go build -o main cmd/api/main.go
 
 # Run the application
 run:
 	@go run cmd/api/main.go
+
 # Create DB container
 docker-run:
 	@if docker compose up --build 2>/dev/null; then \
@@ -34,7 +33,8 @@ docker-down:
 test:
 	@echo "Testing..."
 	@go test ./... -v
-# Integrations Tests for the application
+
+# Integration Tests for the application
 itest:
 	@echo "Running integration tests..."
 	@go test ./internal/database -v
@@ -61,4 +61,32 @@ watch:
             fi; \
         fi
 
-.PHONY: all build run test clean watch docker-run docker-down itest
+# Database operations
+migrate-up:
+	@echo "Running migrations..."
+	@goose -dir db/migrations postgres "$$DATABASE_URL" up
+
+migrate-down:
+	@echo "Rolling back migrations..."
+	@goose -dir db/migrations postgres "$$DATABASE_URL" down
+
+migrate-status:
+	@echo "Migration status..."
+	@goose -dir db/migrations postgres "$$DATABASE_URL" status
+
+migrate-create:
+	@echo "Creating new migration: $(name)"
+	@goose -dir db/migrations create $(name) sql
+
+# Generate code with sqlc
+sqlc-generate:
+	@echo "Generating sqlc code..."
+	@sqlc generate
+
+# Install tools
+install-tools:
+	@echo "Installing development tools..."
+	@go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest
+	@go install github.com/pressly/goose/v3/cmd/goose@latest
+
+.PHONY: all build run test clean watch docker-run docker-down itest migrate-up migrate-down migrate-status migrate-create sqlc-generate install-tools

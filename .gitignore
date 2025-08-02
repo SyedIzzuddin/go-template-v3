@@ -22,6 +22,11 @@ tmp/
 .vscode
 .idea
 
+# Claude
+CLAUDE.md
+.claude/
+*claude*
+
 # .env file
 .env
 
