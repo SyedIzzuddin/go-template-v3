@@ -10,6 +10,100 @@ import (
 	"database/sql"
 )
 
+const countFiles = `-- name: CountFiles :one
+SELECT COUNT(*) FROM files
+`
+
+func (q *Queries) CountFiles(ctx context.Context) (int64, error) {
+	row := q.queryRow(ctx, q.countFilesStmt, countFiles)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const countFilesByUser = `-- name: CountFilesByUser :one
+SELECT COUNT(*) FROM files
+WHERE uploaded_by = $1
+    AND ($2::text IS NULL OR file_name ILIKE '%' || $2::text || '%')
+    AND ($3::text IS NULL OR mime_type = $3::text)
+    AND ($4::text IS NULL OR category = $4::text)
+    AND ($5::timestamp IS NULL OR created_at >= $5::timestamp)
+    AND ($6::timestamp IS NULL OR created_at <= $6::timestamp)
+    AND (
+        $7::text IS NULL 
+        OR file_name ILIKE '%' || $7::text || '%' 
+        OR original_name ILIKE '%' || $7::text || '%'
+        OR description ILIKE '%' || $7::text || '%'
+    )
+`
+
+type CountFilesByUserParams struct {
+	UploadedBy     int32          `db:"uploaded_by" json:"uploaded_by"`
+	FileNameFilter sql.NullString `db:"file_name_filter" json:"file_name_filter"`
+	MimeTypeFilter sql.NullString `db:"mime_type_filter" json:"mime_type_filter"`
+	CategoryFilter sql.NullString `db:"category_filter" json:"category_filter"`
+	CreatedAfter   sql.NullTime   `db:"created_after" json:"created_after"`
+	CreatedBefore  sql.NullTime   `db:"created_before" json:"created_before"`
+	Search         sql.NullString `db:"search" json:"search"`
+}
+
+func (q *Queries) CountFilesByUser(ctx context.Context, arg CountFilesByUserParams) (int64, error) {
+	row := q.queryRow(ctx, q.countFilesByUserStmt, countFilesByUser,
+		arg.UploadedBy,
+		arg.FileNameFilter,
+		arg.MimeTypeFilter,
+		arg.CategoryFilter,
+		arg.CreatedAfter,
+		arg.CreatedBefore,
+		arg.Search,
+	)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const countFilesWithFilters = `-- name: CountFilesWithFilters :one
+SELECT COUNT(*) FROM files
+WHERE 
+    ($1::text IS NULL OR file_name ILIKE '%' || $1::text || '%')
+    AND ($2::text IS NULL OR mime_type = $2::text)
+    AND ($3::text IS NULL OR category = $3::text)
+    AND ($4::integer IS NULL OR uploaded_by = $4::integer)
+    AND ($5::timestamp IS NULL OR created_at >= $5::timestamp)
+    AND ($6::timestamp IS NULL OR created_at <= $6::timestamp)
+    AND (
+        $7::text IS NULL 
+        OR file_name ILIKE '%' || $7::text || '%' 
+        OR original_name ILIKE '%' || $7::text || '%'
+        OR description ILIKE '%' || $7::text || '%'
+    )
+`
+
+type CountFilesWithFiltersParams struct {
+	FileNameFilter   sql.NullString `db:"file_name_filter" json:"file_name_filter"`
+	MimeTypeFilter   sql.NullString `db:"mime_type_filter" json:"mime_type_filter"`
+	CategoryFilter   sql.NullString `db:"category_filter" json:"category_filter"`
+	UploadedByFilter sql.NullInt32  `db:"uploaded_by_filter" json:"uploaded_by_filter"`
+	CreatedAfter     sql.NullTime   `db:"created_after" json:"created_after"`
+	CreatedBefore    sql.NullTime   `db:"created_before" json:"created_before"`
+	Search           sql.NullString `db:"search" json:"search"`
+}
+
+func (q *Queries) CountFilesWithFilters(ctx context.Context, arg CountFilesWithFiltersParams) (int64, error) {
+	row := q.queryRow(ctx, q.countFilesWithFiltersStmt, countFilesWithFilters,
+		arg.FileNameFilter,
+		arg.MimeTypeFilter,
+		arg.CategoryFilter,
+		arg.UploadedByFilter,
+		arg.CreatedAfter,
+		arg.CreatedBefore,
+		arg.Search,
+	)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createFile = `-- name: CreateFile :one
 INSERT INTO files (file_name, original_name, file_path, file_size, mime_type, description, category, uploaded_by)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
@@ -105,6 +199,95 @@ func (q *Queries) GetAllFiles(ctx context.Context) ([]Files, error) {
 	return items, nil
 }
 
+const getAllFilesWithPaginationAndFilters = `-- name: GetAllFilesWithPaginationAndFilters :many
+SELECT id, file_name, original_name, file_path, file_size, mime_type, description, category, uploaded_by, created_at, updated_at FROM files
+WHERE 
+    ($3::text IS NULL OR file_name ILIKE '%' || $3::text || '%')
+    AND ($4::text IS NULL OR mime_type = $4::text)
+    AND ($5::text IS NULL OR category = $5::text)
+    AND ($6::integer IS NULL OR uploaded_by = $6::integer)
+    AND ($7::timestamp IS NULL OR created_at >= $7::timestamp)
+    AND ($8::timestamp IS NULL OR created_at <= $8::timestamp)
+    AND (
+        $9::text IS NULL 
+        OR file_name ILIKE '%' || $9::text || '%' 
+        OR original_name ILIKE '%' || $9::text || '%'
+        OR description ILIKE '%' || $9::text || '%'
+    )
+ORDER BY
+    CASE WHEN $10::text = 'id' AND $11::text = 'ASC' THEN id END ASC,
+    CASE WHEN $10::text = 'id' AND $11::text = 'DESC' THEN id END DESC,
+    CASE WHEN $10::text = 'file_name' AND $11::text = 'ASC' THEN file_name END ASC,
+    CASE WHEN $10::text = 'file_name' AND $11::text = 'DESC' THEN file_name END DESC,
+    CASE WHEN $10::text = 'file_size' AND $11::text = 'ASC' THEN file_size END ASC,
+    CASE WHEN $10::text = 'file_size' AND $11::text = 'DESC' THEN file_size END DESC,
+    CASE WHEN $10::text = 'created_at' AND $11::text = 'ASC' THEN created_at END ASC,
+    CASE WHEN $10::text = 'created_at' AND $11::text = 'DESC' THEN created_at END DESC,
+    created_at DESC
+LIMIT $1 OFFSET $2
+`
+
+type GetAllFilesWithPaginationAndFiltersParams struct {
+	Limit            int32          `db:"limit" json:"limit"`
+	Offset           int32          `db:"offset" json:"offset"`
+	FileNameFilter   sql.NullString `db:"file_name_filter" json:"file_name_filter"`
+	MimeTypeFilter   sql.NullString `db:"mime_type_filter" json:"mime_type_filter"`
+	CategoryFilter   sql.NullString `db:"category_filter" json:"category_filter"`
+	UploadedByFilter sql.NullInt32  `db:"uploaded_by_filter" json:"uploaded_by_filter"`
+	CreatedAfter     sql.NullTime   `db:"created_after" json:"created_after"`
+	CreatedBefore    sql.NullTime   `db:"created_before" json:"created_before"`
+	Search           sql.NullString `db:"search" json:"search"`
+	SortField        string         `db:"sort_field" json:"sort_field"`
+	SortOrder        string         `db:"sort_order" json:"sort_order"`
+}
+
+func (q *Queries) GetAllFilesWithPaginationAndFilters(ctx context.Context, arg GetAllFilesWithPaginationAndFiltersParams) ([]Files, error) {
+	rows, err := q.query(ctx, q.getAllFilesWithPaginationAndFiltersStmt, getAllFilesWithPaginationAndFilters,
+		arg.Limit,
+		arg.Offset,
+		arg.FileNameFilter,
+		arg.MimeTypeFilter,
+		arg.CategoryFilter,
+		arg.UploadedByFilter,
+		arg.CreatedAfter,
+		arg.CreatedBefore,
+		arg.Search,
+		arg.SortField,
+		arg.SortOrder,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Files{}
+	for rows.Next() {
+		var i Files
+		if err := rows.Scan(
+			&i.ID,
+			&i.FileName,
+			&i.OriginalName,
+			&i.FilePath,
+			&i.FileSize,
+			&i.MimeType,
+			&i.Description,
+			&i.Category,
+			&i.UploadedBy,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getFile = `-- name: GetFile :one
 SELECT id, file_name, original_name, file_path, file_size, mime_type, description, category, uploaded_by, created_at, updated_at FROM files
 WHERE id = $1 LIMIT 1
@@ -137,6 +320,94 @@ ORDER BY created_at DESC
 
 func (q *Queries) GetFilesByUser(ctx context.Context, uploadedBy int32) ([]Files, error) {
 	rows, err := q.query(ctx, q.getFilesByUserStmt, getFilesByUser, uploadedBy)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Files{}
+	for rows.Next() {
+		var i Files
+		if err := rows.Scan(
+			&i.ID,
+			&i.FileName,
+			&i.OriginalName,
+			&i.FilePath,
+			&i.FileSize,
+			&i.MimeType,
+			&i.Description,
+			&i.Category,
+			&i.UploadedBy,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getFilesByUserWithPagination = `-- name: GetFilesByUserWithPagination :many
+SELECT id, file_name, original_name, file_path, file_size, mime_type, description, category, uploaded_by, created_at, updated_at FROM files
+WHERE uploaded_by = $3
+    AND ($4::text IS NULL OR file_name ILIKE '%' || $4::text || '%')
+    AND ($5::text IS NULL OR mime_type = $5::text)
+    AND ($6::text IS NULL OR category = $6::text)
+    AND ($7::timestamp IS NULL OR created_at >= $7::timestamp)
+    AND ($8::timestamp IS NULL OR created_at <= $8::timestamp)
+    AND (
+        $9::text IS NULL 
+        OR file_name ILIKE '%' || $9::text || '%' 
+        OR original_name ILIKE '%' || $9::text || '%'
+        OR description ILIKE '%' || $9::text || '%'
+    )
+ORDER BY
+    CASE WHEN $10::text = 'id' AND $11::text = 'ASC' THEN id END ASC,
+    CASE WHEN $10::text = 'id' AND $11::text = 'DESC' THEN id END DESC,
+    CASE WHEN $10::text = 'file_name' AND $11::text = 'ASC' THEN file_name END ASC,
+    CASE WHEN $10::text = 'file_name' AND $11::text = 'DESC' THEN file_name END DESC,
+    CASE WHEN $10::text = 'file_size' AND $11::text = 'ASC' THEN file_size END ASC,
+    CASE WHEN $10::text = 'file_size' AND $11::text = 'DESC' THEN file_size END DESC,
+    CASE WHEN $10::text = 'created_at' AND $11::text = 'ASC' THEN created_at END ASC,
+    CASE WHEN $10::text = 'created_at' AND $11::text = 'DESC' THEN created_at END DESC,
+    created_at DESC
+LIMIT $1 OFFSET $2
+`
+
+type GetFilesByUserWithPaginationParams struct {
+	Limit          int32          `db:"limit" json:"limit"`
+	Offset         int32          `db:"offset" json:"offset"`
+	UploadedBy     int32          `db:"uploaded_by" json:"uploaded_by"`
+	FileNameFilter sql.NullString `db:"file_name_filter" json:"file_name_filter"`
+	MimeTypeFilter sql.NullString `db:"mime_type_filter" json:"mime_type_filter"`
+	CategoryFilter sql.NullString `db:"category_filter" json:"category_filter"`
+	CreatedAfter   sql.NullTime   `db:"created_after" json:"created_after"`
+	CreatedBefore  sql.NullTime   `db:"created_before" json:"created_before"`
+	Search         sql.NullString `db:"search" json:"search"`
+	SortField      string         `db:"sort_field" json:"sort_field"`
+	SortOrder      string         `db:"sort_order" json:"sort_order"`
+}
+
+func (q *Queries) GetFilesByUserWithPagination(ctx context.Context, arg GetFilesByUserWithPaginationParams) ([]Files, error) {
+	rows, err := q.query(ctx, q.getFilesByUserWithPaginationStmt, getFilesByUserWithPagination,
+		arg.Limit,
+		arg.Offset,
+		arg.UploadedBy,
+		arg.FileNameFilter,
+		arg.MimeTypeFilter,
+		arg.CategoryFilter,
+		arg.CreatedAfter,
+		arg.CreatedBefore,
+		arg.Search,
+		arg.SortField,
+		arg.SortOrder,
+	)
 	if err != nil {
 		return nil, err
 	}

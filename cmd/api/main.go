@@ -1,3 +1,36 @@
+// Go REST API Template
+// @title Go REST API Template
+// @version 3.0
+// @description A production-ready, scalable Go REST API template with JWT authentication, RBAC, email verification, password reset, and comprehensive security features.
+// @termsOfService http://localhost:8080/terms/
+
+// @contact.name API Support
+// @contact.url http://localhost:8080/support
+// @contact.email support@example.com
+
+// @license.name MIT
+// @license.url https://opensource.org/licenses/MIT
+
+// @host localhost:8080
+// @BasePath /api/v1
+
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description Type "Bearer" followed by a space and JWT token.
+
+// @tag.name Authentication
+// @tag.description Authentication and authorization endpoints
+
+// @tag.name User Management
+// @tag.description User management endpoints with RBAC protection
+
+// @tag.name File Management
+// @tag.description File upload and management endpoints
+
+// @tag.name Health
+// @tag.description Health check endpoints
+
 package main
 
 import (

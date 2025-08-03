@@ -23,6 +23,18 @@ func NewAuthHandler(authService service.AuthService, validator *validator.Valida
 	}
 }
 
+// Register godoc
+// @Summary Register a new user
+// @Description Register a new user with email and password. Default role is 'user'.
+// @Tags Authentication
+// @Accept json
+// @Produce json
+// @Param request body dto.RegisterRequest true "User registration data"
+// @Success 201 {object} response.Response{data=dto.AuthResponse} "User registered successfully"
+// @Failure 400 {object} response.Response{error=[]dto.ValidationError} "Validation error"
+// @Failure 409 {object} response.Response "User already exists"
+// @Failure 500 {object} response.Response "Internal server error"
+// @Router /auth/register [post]
 func (h *AuthHandler) Register(c echo.Context) error {
 	requestID := c.Response().Header().Get(echo.HeaderXRequestID)
 	logger.Info("User registration request started", zap.String("request_id", requestID))
@@ -54,6 +66,18 @@ func (h *AuthHandler) Register(c echo.Context) error {
 	return response.Created(c, "User registered successfully", authResponse)
 }
 
+// Login godoc
+// @Summary User login
+// @Description Authenticate user with email and password, returns JWT tokens
+// @Tags Authentication
+// @Accept json
+// @Produce json
+// @Param request body dto.LoginRequest true "User login credentials"
+// @Success 200 {object} response.Response{data=dto.AuthResponse} "Login successful"
+// @Failure 400 {object} response.Response{error=[]dto.ValidationError} "Validation error"
+// @Failure 401 {object} response.Response "Invalid credentials"
+// @Failure 500 {object} response.Response "Internal server error"
+// @Router /auth/login [post]
 func (h *AuthHandler) Login(c echo.Context) error {
 	requestID := c.Response().Header().Get(echo.HeaderXRequestID)
 	logger.Info("User login request started", zap.String("request_id", requestID))
@@ -111,6 +135,17 @@ func (h *AuthHandler) RefreshToken(c echo.Context) error {
 	return response.Success(c, "Token refreshed successfully", tokenResponse)
 }
 
+// GetProfile godoc
+// @Summary Get current user profile
+// @Description Get the profile of the currently authenticated user
+// @Tags Authentication
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} response.Response{data=dto.UserProfileResponse} "Profile retrieved successfully"
+// @Failure 401 {object} response.Response "Unauthorized"
+// @Failure 500 {object} response.Response "Internal server error"
+// @Router /auth/me [get]
 func (h *AuthHandler) GetProfile(c echo.Context) error {
 	requestID := c.Response().Header().Get(echo.HeaderXRequestID)
 	userID := c.Get("user_id").(int) // Set by auth middleware

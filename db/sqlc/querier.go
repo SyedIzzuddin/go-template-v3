@@ -10,22 +10,29 @@ import (
 )
 
 type Querier interface {
+	CountFiles(ctx context.Context) (int64, error)
+	CountFilesByUser(ctx context.Context, arg CountFilesByUserParams) (int64, error)
+	CountFilesWithFilters(ctx context.Context, arg CountFilesWithFiltersParams) (int64, error)
 	CountUsers(ctx context.Context) (int64, error)
+	CountUsersWithFilters(ctx context.Context, arg CountUsersWithFiltersParams) (int64, error)
 	CreateFile(ctx context.Context, arg CreateFileParams) (Files, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (Users, error)
 	CreateUserWithPassword(ctx context.Context, arg CreateUserWithPasswordParams) (Users, error)
 	DeleteFile(ctx context.Context, id int32) error
 	DeleteUser(ctx context.Context, id int32) error
 	GetAllFiles(ctx context.Context) ([]Files, error)
+	GetAllFilesWithPaginationAndFilters(ctx context.Context, arg GetAllFilesWithPaginationAndFiltersParams) ([]Files, error)
 	GetAllUsers(ctx context.Context) ([]Users, error)
 	GetFile(ctx context.Context, id int32) (Files, error)
 	GetFilesByUser(ctx context.Context, uploadedBy int32) ([]Files, error)
+	GetFilesByUserWithPagination(ctx context.Context, arg GetFilesByUserWithPaginationParams) ([]Files, error)
 	GetUser(ctx context.Context, id int32) (Users, error)
 	GetUserByEmail(ctx context.Context, email string) (Users, error)
 	GetUserByEmailWithPassword(ctx context.Context, email string) (Users, error)
 	GetUserByPasswordResetToken(ctx context.Context, passwordResetToken sql.NullString) (Users, error)
 	GetUserByVerificationToken(ctx context.Context, emailVerificationToken sql.NullString) (Users, error)
 	ListUsers(ctx context.Context, arg ListUsersParams) ([]Users, error)
+	ListUsersWithPaginationAndFilters(ctx context.Context, arg ListUsersWithPaginationAndFiltersParams) ([]Users, error)
 	ResetPassword(ctx context.Context, arg ResetPasswordParams) error
 	UpdateEmailVerification(ctx context.Context, arg UpdateEmailVerificationParams) (Users, error)
 	UpdateEmailVerificationToken(ctx context.Context, arg UpdateEmailVerificationTokenParams) (Users, error)

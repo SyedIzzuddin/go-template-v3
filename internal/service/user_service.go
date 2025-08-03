@@ -8,6 +8,7 @@ import (
 	"go-template/internal/entity"
 	"go-template/internal/logger"
 	"go-template/internal/repository"
+	"go-template/pkg/pagination"
 
 	"go.uber.org/zap"
 )
@@ -18,6 +19,7 @@ type UserService interface {
 	UpdateUser(ctx context.Context, id int, req dto.UpdateUserRequest) (*dto.UserResponse, error)
 	DeleteUser(ctx context.Context, id int) error
 	GetAllUsers(ctx context.Context) ([]dto.UserResponse, error)
+	GetAllUsersWithPagination(ctx context.Context, paginationParams pagination.PaginationParams, filterParams pagination.FilterParams) ([]dto.UserResponse, pagination.PaginationMeta, error)
 }
 
 type userService struct {
@@ -133,6 +135,30 @@ func (s *userService) GetAllUsers(ctx context.Context) ([]dto.UserResponse, erro
 	}
 	
 	return userResponses, nil
+}
+
+func (s *userService) GetAllUsersWithPagination(ctx context.Context, paginationParams pagination.PaginationParams, filterParams pagination.FilterParams) ([]dto.UserResponse, pagination.PaginationMeta, error) {
+	logger.Debug("Getting all users with pagination", 
+		zap.Int("page", paginationParams.Page),
+		zap.Int("limit", paginationParams.Limit),
+		zap.String("sort", paginationParams.Sort),
+		zap.String("order", paginationParams.Order),
+		zap.String("search", paginationParams.Search))
+	
+	users, totalCount, err := s.userRepo.GetAllWithPagination(ctx, paginationParams, filterParams)
+	if err != nil {
+		logger.Error("Failed to get users with pagination", zap.Error(err))
+		return nil, pagination.PaginationMeta{}, err
+	}
+	
+	var userResponses []dto.UserResponse
+	for _, user := range users {
+		userResponses = append(userResponses, *s.mapUserToResponse(&user))
+	}
+	
+	paginationMeta := pagination.NewPaginationMeta(paginationParams.Page, paginationParams.Limit, totalCount)
+	
+	return userResponses, paginationMeta, nil
 }
 
 func (s *userService) mapUserToResponse(user *entity.User) *dto.UserResponse {

@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"time"
 
+	_ "go-template/docs" // Import generated docs
 	"go-template/internal/database"
 	"go-template/internal/handler"
 	"go-template/internal/middleware"
@@ -11,12 +12,23 @@ import (
 	"go-template/pkg/jwt"
 
 	"github.com/labstack/echo/v4"
+	echoSwagger "github.com/swaggo/echo-swagger"
 )
 
 func SetupRoutes(e *echo.Echo, db *database.DB, userHandler *handler.UserHandler, fileHandler *handler.FileHandler, authHandler *handler.AuthHandler, jwtManager *jwt.JWTManager) {
+	// Swagger documentation route
+	e.GET("/swagger/*", echoSwagger.WrapHandler)
+
 	api := e.Group("/api/v1")
 
 	// Health check (public)
+	// @Summary Health check
+	// @Description Get API health status and database connectivity
+	// @Tags Health
+	// @Accept json
+	// @Produce json
+	// @Success 200 {object} response.Response{data=object} "API is healthy"
+	// @Router /health [get]
 	api.GET("/health", func(c echo.Context) error {
 		return c.JSON(http.StatusOK, map[string]interface{}{
 			"status":    "healthy",

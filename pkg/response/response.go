@@ -3,14 +3,17 @@ package response
 import (
 	"net/http"
 
+	"go-template/pkg/pagination"
+
 	"github.com/labstack/echo/v4"
 )
 
 type Response struct {
-	Success bool        `json:"success"`
-	Message string      `json:"message"`
-	Data    interface{} `json:"data,omitempty"`
-	Error   interface{} `json:"error,omitempty"`
+	Success    bool                     `json:"success"`
+	Message    string                   `json:"message"`
+	Data       interface{}              `json:"data,omitempty"`
+	Error      interface{}              `json:"error,omitempty"`
+	Pagination *pagination.PaginationMeta `json:"pagination,omitempty"`
 }
 
 func Success(c echo.Context, message string, data interface{}) error {
@@ -87,5 +90,15 @@ func ValidationError(c echo.Context, message string, validationErrors interface{
 		Success: false,
 		Message: message,
 		Error:   validationErrors,
+	})
+}
+
+// SuccessWithPagination returns success response with pagination metadata
+func SuccessWithPagination(c echo.Context, message string, data interface{}, paginationMeta pagination.PaginationMeta) error {
+	return c.JSON(http.StatusOK, Response{
+		Success:    true,
+		Message:    message,
+		Data:       data,
+		Pagination: &paginationMeta,
 	})
 }

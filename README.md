@@ -6,6 +6,7 @@ A production-ready, scalable Go REST API template built with modern best practic
 
 - **JWT Authentication**: Complete auth system with access + refresh tokens, password hashing
 - **Role-Based Access Control (RBAC)**: Three-tier role system (admin, moderator, user)
+- **API Documentation**: Interactive Swagger/OpenAPI documentation with request/response examples
 - **Email System**: SMTP email service with beautiful HTML templates for verification and password reset
 - **Email Verification**: Secure user email verification with token-based authentication
 - **Password Reset**: Complete password reset system with secure tokens and email delivery
@@ -13,6 +14,7 @@ A production-ready, scalable Go REST API template built with modern best practic
 - **Echo Framework**: High-performance HTTP router and middleware
 - **PostgreSQL Integration**: Raw SQL with pgx driver and SQLC for type-safe queries
 - **Database Migrations**: Goose for schema versioning with automatic migration on startup
+- **Pagination & Filtering**: Comprehensive pagination system with advanced filtering, search, and sorting capabilities
 - **File Management**: Secure file upload with validation and user-linked storage
 - **Structured Logging**: Zap logger with request tracing
 - **Security Features**: JWT auth, RBAC authorization, bcrypt hashing, rate limiting, CORS, input validation, email verification
@@ -40,6 +42,7 @@ A production-ready, scalable Go REST API template built with modern best practic
 │   └── utils/                  # Utility functions
 ├── pkg/
 │   ├── jwt/                    # JWT token management utilities
+│   ├── pagination/             # Pagination utilities and metadata
 │   ├── response/               # Standardized API responses
 │   ├── storage/                # File storage utilities
 │   └── validator/              # Request validation with custom rules
@@ -209,6 +212,7 @@ docker compose down -v
 | `make migrate-status`                     | Check migration status            |
 | `make migrate-create name=migration_name` | Create new migration              |
 | `make sqlc-generate`                      | Generate Go code from SQL queries |
+| `make swagger-gen`                        | Generate Swagger API documentation |
 
 ### Docker Commands
 
@@ -296,7 +300,7 @@ SMTP_FROM_NAME=Go Template API
 ### User Management (RBAC Protected)
 
 - `POST /api/v1/users` - Create user (Admin only)
-- `GET /api/v1/users` - List all users (Moderator+ only)
+- `GET /api/v1/users` - List all users with pagination and filtering (Moderator+ only)
 - `GET /api/v1/users/:id` - Get user by ID (Own profile or Admin)
 - `PUT /api/v1/users/:id` - Update user (Own profile or Admin)
 - `DELETE /api/v1/users/:id` - Delete user (Admin only)
@@ -304,8 +308,8 @@ SMTP_FROM_NAME=Go Template API
 ### File Management (RBAC Protected)
 
 - `POST /api/v1/files/upload` - Upload files (All authenticated users)
-- `GET /api/v1/files` - List all files (Moderator+ only)
-- `GET /api/v1/files/my` - List current user's files (All authenticated users)
+- `GET /api/v1/files` - List all files with pagination and filtering (Moderator+ only)
+- `GET /api/v1/files/my` - List current user's files with pagination (All authenticated users)
 - `GET /api/v1/files/:id` - Get file metadata (All authenticated users)
 - `PUT /api/v1/files/:id` - Update file metadata (All authenticated users)
 - `DELETE /api/v1/files/:id` - Delete file (Moderator+ only)
@@ -316,7 +320,147 @@ SMTP_FROM_NAME=Go Template API
 - `GET /files/:filename` - Serve file directly
 - `GET /uploads/*` - Static file serving
 
-For detailed API documentation, see [docs/api/README.md](docs/api/README.md)
+## 🔍 Pagination & Filtering
+
+The API supports comprehensive pagination, filtering, and search functionality for list endpoints.
+
+### Query Parameters
+
+#### Pagination Parameters
+- `page` - Page number (default: 1)
+- `limit` - Items per page (default: 10, max: 100)
+- `sort` - Sort field (varies by endpoint)
+- `order` - Sort order: ASC or DESC (default: DESC)
+- `search` - Search across multiple fields
+
+#### User Filtering Parameters
+- `name` - Filter by name (partial match)
+- `email` - Filter by email (partial match)
+- `role` - Filter by role (exact match: admin, moderator, user)
+- `email_verified` - Filter by email verification status (true/false)
+- `created_after` - Filter by creation date (RFC3339 format)
+- `created_before` - Filter by creation date (RFC3339 format)
+
+#### File Filtering Parameters
+- `file_name` - Filter by file name (partial match)
+- `mime_type` - Filter by MIME type (exact match)
+- `category` - Filter by category (exact match)
+- `uploaded_by` - Filter by uploader user ID
+- `created_after` - Filter by upload date (RFC3339 format)
+- `created_before` - Filter by upload date (RFC3339 format)
+
+### Example Requests
+
+#### Basic Pagination
+```bash
+# Get second page with 20 users per page
+GET /api/v1/users?page=2&limit=20
+
+# Sort users by name in ascending order
+GET /api/v1/users?sort=name&order=ASC
+```
+
+#### Filtering Examples
+```bash
+# Find users with "john" in their name or email
+GET /api/v1/users?search=john
+
+# Get only admin users
+GET /api/v1/users?role=admin
+
+# Get verified users created after 2024-01-01
+GET /api/v1/users?email_verified=true&created_after=2024-01-01T00:00:00Z
+
+# Filter files by MIME type
+GET /api/v1/files?mime_type=image/jpeg
+
+# Get files uploaded by specific user
+GET /api/v1/files/my?file_name=report&category=documents
+```
+
+#### Combined Parameters
+```bash
+# Complex query: Search for users with "admin" in name/email, 
+# verified, created in 2024, sorted by creation date
+GET /api/v1/users?search=admin&email_verified=true&created_after=2024-01-01T00:00:00Z&created_before=2024-12-31T23:59:59Z&sort=created_at&order=DESC&page=1&limit=50
+```
+
+### Response Format
+
+All paginated endpoints return responses in this format:
+
+```json
+{
+  "success": true,
+  "message": "Users retrieved successfully",
+  "data": [
+    {
+      "id": 1,
+      "name": "John Doe",
+      "email": "john@example.com",
+      "role": "user",
+      "email_verified": true,
+      "created_at": "2024-01-15T10:30:00Z",
+      "updated_at": "2024-01-20T14:20:00Z"
+    }
+  ],
+  "pagination": {
+    "current_page": 1,
+    "per_page": 10,
+    "total_records": 150,
+    "total_pages": 15,
+    "has_next": true,
+    "has_prev": false
+  }
+}
+```
+
+### Supported Sort Fields
+
+#### Users
+- `id` - User ID
+- `name` - User name
+- `email` - Email address
+- `created_at` - Creation timestamp
+- `role` - User role
+
+#### Files
+- `id` - File ID
+- `file_name` - File name
+- `file_size` - File size in bytes
+- `created_at` - Upload timestamp
+
+### API Documentation
+
+Interactive Swagger/OpenAPI documentation is available at `/swagger/index.html` when the server is running.
+
+- **Swagger UI**: `http://localhost:8080/swagger/index.html`
+- **OpenAPI Spec**: `http://localhost:8080/swagger/doc.json`
+
+The documentation includes:
+- Complete endpoint descriptions with RBAC requirements
+- Request/response schemas and examples
+- Authentication methods (Bearer JWT)
+- Interactive API testing interface
+
+To regenerate documentation after making changes:
+```bash
+make swagger-gen
+```
+
+## 📊 Performance & Scalability
+
+### Pagination Architecture
+- **Database-Level**: LIMIT/OFFSET pagination at PostgreSQL level
+- **Type-Safe Queries**: SQLC-generated code with parameter validation
+- **Optimized Counting**: Separate count queries for pagination metadata
+- **Index Support**: Optimized for common sort fields (id, created_at)
+- **Parameter Limits**: Configurable limits to prevent resource exhaustion
+
+### Future Enhancements
+- **Cursor-Based Pagination**: Planned for better performance with large datasets
+- **Caching Layer**: Upcoming Redis integration for frequently accessed data
+- **Full-Text Search**: Enhanced search capabilities with PostgreSQL FTS
 
 ## 🔒 Security Features
 
@@ -390,10 +534,12 @@ This template provides:
 
 - ✅ JWT Authentication with access + refresh tokens
 - ✅ Role-Based Access Control (RBAC) with admin, moderator, and user roles
+- ✅ Interactive Swagger/OpenAPI documentation
 - ✅ Email verification system with secure tokens
 - ✅ Password reset functionality with email delivery
 - ✅ SMTP email service with beautiful HTML templates
 - ✅ RESTful API with user and file management
+- ✅ Advanced pagination, filtering, and search capabilities
 - ✅ Clean, layered architecture
 - ✅ Database migrations and type-safe queries
 - ✅ Comprehensive middleware (logging, CORS, rate limiting, JWT auth, RBAC, email verification)

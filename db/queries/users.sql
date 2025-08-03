@@ -25,8 +25,51 @@ SELECT * FROM users
 ORDER BY created_at DESC
 LIMIT $1 OFFSET $2;
 
+-- name: ListUsersWithPaginationAndFilters :many
+SELECT * FROM users
+WHERE 
+    (sqlc.narg(name_filter)::text IS NULL OR name ILIKE '%' || sqlc.narg(name_filter)::text || '%')
+    AND (sqlc.narg(email_filter)::text IS NULL OR email ILIKE '%' || sqlc.narg(email_filter)::text || '%') 
+    AND (sqlc.narg(role_filter)::text IS NULL OR role = sqlc.narg(role_filter)::text)
+    AND (sqlc.narg(email_verified_filter)::boolean IS NULL OR email_verified = sqlc.narg(email_verified_filter)::boolean)
+    AND (sqlc.narg(created_after)::timestamp IS NULL OR created_at >= sqlc.narg(created_after)::timestamp)
+    AND (sqlc.narg(created_before)::timestamp IS NULL OR created_at <= sqlc.narg(created_before)::timestamp)
+    AND (
+        sqlc.narg(search)::text IS NULL 
+        OR name ILIKE '%' || sqlc.narg(search)::text || '%' 
+        OR email ILIKE '%' || sqlc.narg(search)::text || '%'
+    )
+ORDER BY
+    CASE WHEN @sort_field::text = 'id' AND @sort_order::text = 'ASC' THEN id END ASC,
+    CASE WHEN @sort_field::text = 'id' AND @sort_order::text = 'DESC' THEN id END DESC,
+    CASE WHEN @sort_field::text = 'name' AND @sort_order::text = 'ASC' THEN name END ASC,
+    CASE WHEN @sort_field::text = 'name' AND @sort_order::text = 'DESC' THEN name END DESC,
+    CASE WHEN @sort_field::text = 'email' AND @sort_order::text = 'ASC' THEN email END ASC,
+    CASE WHEN @sort_field::text = 'email' AND @sort_order::text = 'DESC' THEN email END DESC,
+    CASE WHEN @sort_field::text = 'created_at' AND @sort_order::text = 'ASC' THEN created_at END ASC,
+    CASE WHEN @sort_field::text = 'created_at' AND @sort_order::text = 'DESC' THEN created_at END DESC,
+    CASE WHEN @sort_field::text = 'role' AND @sort_order::text = 'ASC' THEN role END ASC,
+    CASE WHEN @sort_field::text = 'role' AND @sort_order::text = 'DESC' THEN role END DESC,
+    created_at DESC
+LIMIT $1 OFFSET $2;
+
 -- name: CountUsers :one
 SELECT COUNT(*) FROM users;
+
+-- name: CountUsersWithFilters :one
+SELECT COUNT(*) FROM users
+WHERE 
+    (sqlc.narg(name_filter)::text IS NULL OR name ILIKE '%' || sqlc.narg(name_filter)::text || '%')
+    AND (sqlc.narg(email_filter)::text IS NULL OR email ILIKE '%' || sqlc.narg(email_filter)::text || '%') 
+    AND (sqlc.narg(role_filter)::text IS NULL OR role = sqlc.narg(role_filter)::text)
+    AND (sqlc.narg(email_verified_filter)::boolean IS NULL OR email_verified = sqlc.narg(email_verified_filter)::boolean)
+    AND (sqlc.narg(created_after)::timestamp IS NULL OR created_at >= sqlc.narg(created_after)::timestamp)
+    AND (sqlc.narg(created_before)::timestamp IS NULL OR created_at <= sqlc.narg(created_before)::timestamp)
+    AND (
+        sqlc.narg(search)::text IS NULL 
+        OR name ILIKE '%' || sqlc.narg(search)::text || '%' 
+        OR email ILIKE '%' || sqlc.narg(search)::text || '%'
+    );
 
 -- name: UpdateUser :one
 UPDATE users

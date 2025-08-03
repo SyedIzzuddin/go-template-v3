@@ -24,8 +24,20 @@ func New(db DBTX) *Queries {
 func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	q := Queries{db: db}
 	var err error
+	if q.countFilesStmt, err = db.PrepareContext(ctx, countFiles); err != nil {
+		return nil, fmt.Errorf("error preparing query CountFiles: %w", err)
+	}
+	if q.countFilesByUserStmt, err = db.PrepareContext(ctx, countFilesByUser); err != nil {
+		return nil, fmt.Errorf("error preparing query CountFilesByUser: %w", err)
+	}
+	if q.countFilesWithFiltersStmt, err = db.PrepareContext(ctx, countFilesWithFilters); err != nil {
+		return nil, fmt.Errorf("error preparing query CountFilesWithFilters: %w", err)
+	}
 	if q.countUsersStmt, err = db.PrepareContext(ctx, countUsers); err != nil {
 		return nil, fmt.Errorf("error preparing query CountUsers: %w", err)
+	}
+	if q.countUsersWithFiltersStmt, err = db.PrepareContext(ctx, countUsersWithFilters); err != nil {
+		return nil, fmt.Errorf("error preparing query CountUsersWithFilters: %w", err)
 	}
 	if q.createFileStmt, err = db.PrepareContext(ctx, createFile); err != nil {
 		return nil, fmt.Errorf("error preparing query CreateFile: %w", err)
@@ -45,6 +57,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.getAllFilesStmt, err = db.PrepareContext(ctx, getAllFiles); err != nil {
 		return nil, fmt.Errorf("error preparing query GetAllFiles: %w", err)
 	}
+	if q.getAllFilesWithPaginationAndFiltersStmt, err = db.PrepareContext(ctx, getAllFilesWithPaginationAndFilters); err != nil {
+		return nil, fmt.Errorf("error preparing query GetAllFilesWithPaginationAndFilters: %w", err)
+	}
 	if q.getAllUsersStmt, err = db.PrepareContext(ctx, getAllUsers); err != nil {
 		return nil, fmt.Errorf("error preparing query GetAllUsers: %w", err)
 	}
@@ -53,6 +68,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	}
 	if q.getFilesByUserStmt, err = db.PrepareContext(ctx, getFilesByUser); err != nil {
 		return nil, fmt.Errorf("error preparing query GetFilesByUser: %w", err)
+	}
+	if q.getFilesByUserWithPaginationStmt, err = db.PrepareContext(ctx, getFilesByUserWithPagination); err != nil {
+		return nil, fmt.Errorf("error preparing query GetFilesByUserWithPagination: %w", err)
 	}
 	if q.getUserStmt, err = db.PrepareContext(ctx, getUser); err != nil {
 		return nil, fmt.Errorf("error preparing query GetUser: %w", err)
@@ -71,6 +89,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	}
 	if q.listUsersStmt, err = db.PrepareContext(ctx, listUsers); err != nil {
 		return nil, fmt.Errorf("error preparing query ListUsers: %w", err)
+	}
+	if q.listUsersWithPaginationAndFiltersStmt, err = db.PrepareContext(ctx, listUsersWithPaginationAndFilters); err != nil {
+		return nil, fmt.Errorf("error preparing query ListUsersWithPaginationAndFilters: %w", err)
 	}
 	if q.resetPasswordStmt, err = db.PrepareContext(ctx, resetPassword); err != nil {
 		return nil, fmt.Errorf("error preparing query ResetPassword: %w", err)
@@ -101,9 +122,29 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 
 func (q *Queries) Close() error {
 	var err error
+	if q.countFilesStmt != nil {
+		if cerr := q.countFilesStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing countFilesStmt: %w", cerr)
+		}
+	}
+	if q.countFilesByUserStmt != nil {
+		if cerr := q.countFilesByUserStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing countFilesByUserStmt: %w", cerr)
+		}
+	}
+	if q.countFilesWithFiltersStmt != nil {
+		if cerr := q.countFilesWithFiltersStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing countFilesWithFiltersStmt: %w", cerr)
+		}
+	}
 	if q.countUsersStmt != nil {
 		if cerr := q.countUsersStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing countUsersStmt: %w", cerr)
+		}
+	}
+	if q.countUsersWithFiltersStmt != nil {
+		if cerr := q.countUsersWithFiltersStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing countUsersWithFiltersStmt: %w", cerr)
 		}
 	}
 	if q.createFileStmt != nil {
@@ -136,6 +177,11 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing getAllFilesStmt: %w", cerr)
 		}
 	}
+	if q.getAllFilesWithPaginationAndFiltersStmt != nil {
+		if cerr := q.getAllFilesWithPaginationAndFiltersStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getAllFilesWithPaginationAndFiltersStmt: %w", cerr)
+		}
+	}
 	if q.getAllUsersStmt != nil {
 		if cerr := q.getAllUsersStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getAllUsersStmt: %w", cerr)
@@ -149,6 +195,11 @@ func (q *Queries) Close() error {
 	if q.getFilesByUserStmt != nil {
 		if cerr := q.getFilesByUserStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getFilesByUserStmt: %w", cerr)
+		}
+	}
+	if q.getFilesByUserWithPaginationStmt != nil {
+		if cerr := q.getFilesByUserWithPaginationStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getFilesByUserWithPaginationStmt: %w", cerr)
 		}
 	}
 	if q.getUserStmt != nil {
@@ -179,6 +230,11 @@ func (q *Queries) Close() error {
 	if q.listUsersStmt != nil {
 		if cerr := q.listUsersStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing listUsersStmt: %w", cerr)
+		}
+	}
+	if q.listUsersWithPaginationAndFiltersStmt != nil {
+		if cerr := q.listUsersWithPaginationAndFiltersStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing listUsersWithPaginationAndFiltersStmt: %w", cerr)
 		}
 	}
 	if q.resetPasswordStmt != nil {
@@ -258,61 +314,75 @@ func (q *Queries) queryRow(ctx context.Context, stmt *sql.Stmt, query string, ar
 }
 
 type Queries struct {
-	db                               DBTX
-	tx                               *sql.Tx
-	countUsersStmt                   *sql.Stmt
-	createFileStmt                   *sql.Stmt
-	createUserStmt                   *sql.Stmt
-	createUserWithPasswordStmt       *sql.Stmt
-	deleteFileStmt                   *sql.Stmt
-	deleteUserStmt                   *sql.Stmt
-	getAllFilesStmt                  *sql.Stmt
-	getAllUsersStmt                  *sql.Stmt
-	getFileStmt                      *sql.Stmt
-	getFilesByUserStmt               *sql.Stmt
-	getUserStmt                      *sql.Stmt
-	getUserByEmailStmt               *sql.Stmt
-	getUserByEmailWithPasswordStmt   *sql.Stmt
-	getUserByPasswordResetTokenStmt  *sql.Stmt
-	getUserByVerificationTokenStmt   *sql.Stmt
-	listUsersStmt                    *sql.Stmt
-	resetPasswordStmt                *sql.Stmt
-	updateEmailVerificationStmt      *sql.Stmt
-	updateEmailVerificationTokenStmt *sql.Stmt
-	updateFileStmt                   *sql.Stmt
-	updatePasswordResetTokenStmt     *sql.Stmt
-	updateUserStmt                   *sql.Stmt
-	updateVerificationTokenStmt      *sql.Stmt
-	verifyEmailByTokenStmt           *sql.Stmt
+	db                                      DBTX
+	tx                                      *sql.Tx
+	countFilesStmt                          *sql.Stmt
+	countFilesByUserStmt                    *sql.Stmt
+	countFilesWithFiltersStmt               *sql.Stmt
+	countUsersStmt                          *sql.Stmt
+	countUsersWithFiltersStmt               *sql.Stmt
+	createFileStmt                          *sql.Stmt
+	createUserStmt                          *sql.Stmt
+	createUserWithPasswordStmt              *sql.Stmt
+	deleteFileStmt                          *sql.Stmt
+	deleteUserStmt                          *sql.Stmt
+	getAllFilesStmt                         *sql.Stmt
+	getAllFilesWithPaginationAndFiltersStmt *sql.Stmt
+	getAllUsersStmt                         *sql.Stmt
+	getFileStmt                             *sql.Stmt
+	getFilesByUserStmt                      *sql.Stmt
+	getFilesByUserWithPaginationStmt        *sql.Stmt
+	getUserStmt                             *sql.Stmt
+	getUserByEmailStmt                      *sql.Stmt
+	getUserByEmailWithPasswordStmt          *sql.Stmt
+	getUserByPasswordResetTokenStmt         *sql.Stmt
+	getUserByVerificationTokenStmt          *sql.Stmt
+	listUsersStmt                           *sql.Stmt
+	listUsersWithPaginationAndFiltersStmt   *sql.Stmt
+	resetPasswordStmt                       *sql.Stmt
+	updateEmailVerificationStmt             *sql.Stmt
+	updateEmailVerificationTokenStmt        *sql.Stmt
+	updateFileStmt                          *sql.Stmt
+	updatePasswordResetTokenStmt            *sql.Stmt
+	updateUserStmt                          *sql.Stmt
+	updateVerificationTokenStmt             *sql.Stmt
+	verifyEmailByTokenStmt                  *sql.Stmt
 }
 
 func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 	return &Queries{
-		db:                               tx,
-		tx:                               tx,
-		countUsersStmt:                   q.countUsersStmt,
-		createFileStmt:                   q.createFileStmt,
-		createUserStmt:                   q.createUserStmt,
-		createUserWithPasswordStmt:       q.createUserWithPasswordStmt,
-		deleteFileStmt:                   q.deleteFileStmt,
-		deleteUserStmt:                   q.deleteUserStmt,
-		getAllFilesStmt:                  q.getAllFilesStmt,
-		getAllUsersStmt:                  q.getAllUsersStmt,
-		getFileStmt:                      q.getFileStmt,
-		getFilesByUserStmt:               q.getFilesByUserStmt,
-		getUserStmt:                      q.getUserStmt,
-		getUserByEmailStmt:               q.getUserByEmailStmt,
-		getUserByEmailWithPasswordStmt:   q.getUserByEmailWithPasswordStmt,
-		getUserByPasswordResetTokenStmt:  q.getUserByPasswordResetTokenStmt,
-		getUserByVerificationTokenStmt:   q.getUserByVerificationTokenStmt,
-		listUsersStmt:                    q.listUsersStmt,
-		resetPasswordStmt:                q.resetPasswordStmt,
-		updateEmailVerificationStmt:      q.updateEmailVerificationStmt,
-		updateEmailVerificationTokenStmt: q.updateEmailVerificationTokenStmt,
-		updateFileStmt:                   q.updateFileStmt,
-		updatePasswordResetTokenStmt:     q.updatePasswordResetTokenStmt,
-		updateUserStmt:                   q.updateUserStmt,
-		updateVerificationTokenStmt:      q.updateVerificationTokenStmt,
-		verifyEmailByTokenStmt:           q.verifyEmailByTokenStmt,
+		db:                                      tx,
+		tx:                                      tx,
+		countFilesStmt:                          q.countFilesStmt,
+		countFilesByUserStmt:                    q.countFilesByUserStmt,
+		countFilesWithFiltersStmt:               q.countFilesWithFiltersStmt,
+		countUsersStmt:                          q.countUsersStmt,
+		countUsersWithFiltersStmt:               q.countUsersWithFiltersStmt,
+		createFileStmt:                          q.createFileStmt,
+		createUserStmt:                          q.createUserStmt,
+		createUserWithPasswordStmt:              q.createUserWithPasswordStmt,
+		deleteFileStmt:                          q.deleteFileStmt,
+		deleteUserStmt:                          q.deleteUserStmt,
+		getAllFilesStmt:                         q.getAllFilesStmt,
+		getAllFilesWithPaginationAndFiltersStmt: q.getAllFilesWithPaginationAndFiltersStmt,
+		getAllUsersStmt:                         q.getAllUsersStmt,
+		getFileStmt:                             q.getFileStmt,
+		getFilesByUserStmt:                      q.getFilesByUserStmt,
+		getFilesByUserWithPaginationStmt:        q.getFilesByUserWithPaginationStmt,
+		getUserStmt:                             q.getUserStmt,
+		getUserByEmailStmt:                      q.getUserByEmailStmt,
+		getUserByEmailWithPasswordStmt:          q.getUserByEmailWithPasswordStmt,
+		getUserByPasswordResetTokenStmt:         q.getUserByPasswordResetTokenStmt,
+		getUserByVerificationTokenStmt:          q.getUserByVerificationTokenStmt,
+		listUsersStmt:                           q.listUsersStmt,
+		listUsersWithPaginationAndFiltersStmt:   q.listUsersWithPaginationAndFiltersStmt,
+		resetPasswordStmt:                       q.resetPasswordStmt,
+		updateEmailVerificationStmt:             q.updateEmailVerificationStmt,
+		updateEmailVerificationTokenStmt:        q.updateEmailVerificationTokenStmt,
+		updateFileStmt:                          q.updateFileStmt,
+		updatePasswordResetTokenStmt:            q.updatePasswordResetTokenStmt,
+		updateUserStmt:                          q.updateUserStmt,
+		updateVerificationTokenStmt:             q.updateVerificationTokenStmt,
+		verifyEmailByTokenStmt:                  q.verifyEmailByTokenStmt,
 	}
 }

@@ -83,10 +83,16 @@ sqlc-generate:
 	@echo "Generating sqlc code..."
 	@sqlc generate
 
+# Generate Swagger documentation
+swagger-gen:
+	@echo "Generating Swagger documentation..."
+	@swag init -g cmd/api/main.go
+
 # Install tools
 install-tools:
 	@echo "Installing development tools..."
 	@go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest
 	@go install github.com/pressly/goose/v3/cmd/goose@latest
+	@go install github.com/swaggo/swag/cmd/swag@latest
 
-.PHONY: all build run test clean watch docker-run docker-down itest migrate-up migrate-down migrate-status migrate-create sqlc-generate install-tools
+.PHONY: all build run test clean watch docker-run docker-down itest migrate-up migrate-down migrate-status migrate-create sqlc-generate swagger-gen install-tools

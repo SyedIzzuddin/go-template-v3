@@ -6,6 +6,7 @@ import (
 	"time"
 
 	db "go-template/db/sqlc"
+	"go-template/pkg/pagination"
 
 	"go-template/internal/entity"
 )
@@ -26,6 +27,7 @@ type UserRepository interface {
 	ResetPassword(ctx context.Context, token, passwordHash string) error
 	Delete(ctx context.Context, id int) error
 	GetAll(ctx context.Context) ([]entity.User, error)
+	GetAllWithPagination(ctx context.Context, paginationParams pagination.PaginationParams, filterParams pagination.FilterParams) ([]entity.User, int, error)
 }
 
 type userRepository struct {
@@ -344,4 +346,95 @@ func (r *userRepository) ResetPassword(ctx context.Context, token, passwordHash 
 		PasswordResetToken: sql.NullString{String: token, Valid: true},
 		PasswordHash:       passwordHash,
 	})
+}
+
+func (r *userRepository) GetAllWithPagination(ctx context.Context, paginationParams pagination.PaginationParams, filterParams pagination.FilterParams) ([]entity.User, int, error) {
+	// Prepare filter parameters for SQLC
+	var nameFilter, emailFilter, roleFilter, search sql.NullString
+	var emailVerifiedFilter sql.NullBool
+	var createdAfter, createdBefore sql.NullTime
+
+	if filterParams.Name != "" {
+		nameFilter = sql.NullString{String: filterParams.Name, Valid: true}
+	}
+	if filterParams.Email != "" {
+		emailFilter = sql.NullString{String: filterParams.Email, Valid: true}
+	}
+	if filterParams.Role != "" {
+		roleFilter = sql.NullString{String: filterParams.Role, Valid: true}
+	}
+	if filterParams.EmailVerified != nil {
+		emailVerifiedFilter = sql.NullBool{Bool: *filterParams.EmailVerified, Valid: true}
+	}
+	if filterParams.CreatedAfter != "" {
+		if parsedTime, err := time.Parse(time.RFC3339, filterParams.CreatedAfter); err == nil {
+			createdAfter = sql.NullTime{Time: parsedTime, Valid: true}
+		}
+	}
+	if filterParams.CreatedBefore != "" {
+		if parsedTime, err := time.Parse(time.RFC3339, filterParams.CreatedBefore); err == nil {
+			createdBefore = sql.NullTime{Time: parsedTime, Valid: true}
+		}
+	}
+	if paginationParams.Search != "" {
+		search = sql.NullString{String: paginationParams.Search, Valid: true}
+	}
+
+	// Validate and sanitize sort field
+	allowedSortFields := []string{"id", "name", "email", "created_at", "role"}
+	sortField := pagination.ValidateSortField(paginationParams.Sort, allowedSortFields)
+	sortOrder := pagination.SanitizeOrder(paginationParams.Order)
+
+	// Get paginated users
+	users, err := r.queries.ListUsersWithPaginationAndFilters(ctx, db.ListUsersWithPaginationAndFiltersParams{
+		Limit:               int32(paginationParams.Limit),
+		Offset:              int32(paginationParams.CalculateOffset()),
+		NameFilter:          nameFilter,
+		EmailFilter:         emailFilter,
+		RoleFilter:          roleFilter,
+		EmailVerifiedFilter: emailVerifiedFilter,
+		CreatedAfter:        createdAfter,
+		CreatedBefore:       createdBefore,
+		Search:              search,
+		SortField:           sortField,
+		SortOrder:           sortOrder,
+	})
+	if err != nil {
+		return nil, 0, err
+	}
+
+	// Get total count with same filters
+	totalCount, err := r.queries.CountUsersWithFilters(ctx, db.CountUsersWithFiltersParams{
+		NameFilter:          nameFilter,
+		EmailFilter:         emailFilter,
+		RoleFilter:          roleFilter,
+		EmailVerifiedFilter: emailVerifiedFilter,
+		CreatedAfter:        createdAfter,
+		CreatedBefore:       createdBefore,
+		Search:              search,
+	})
+	if err != nil {
+		return nil, 0, err
+	}
+
+	// Convert SQLC models to entities
+	entityUsers := make([]entity.User, len(users))
+	for i, dbUser := range users {
+		entityUsers[i] = entity.User{
+			ID:                         int(dbUser.ID),
+			Name:                       dbUser.Name,
+			Email:                      dbUser.Email,
+			PasswordHash:               dbUser.PasswordHash,
+			Role:                       dbUser.Role,
+			EmailVerified:              dbUser.EmailVerified,
+			EmailVerificationToken:     nullStringToPtr(dbUser.EmailVerificationToken),
+			EmailVerificationExpiresAt: nullTimeToPtr(dbUser.EmailVerificationExpiresAt),
+			PasswordResetToken:         nullStringToPtr(dbUser.PasswordResetToken),
+			PasswordResetExpiresAt:     nullTimeToPtr(dbUser.PasswordResetExpiresAt),
+			CreatedAt:                  dbUser.CreatedAt.Time,
+			UpdatedAt:                  dbUser.UpdatedAt.Time,
+		}
+	}
+
+	return entityUsers, int(totalCount), nil
 }

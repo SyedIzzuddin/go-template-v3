@@ -21,6 +21,47 @@ func (q *Queries) CountUsers(ctx context.Context) (int64, error) {
 	return count, err
 }
 
+const countUsersWithFilters = `-- name: CountUsersWithFilters :one
+SELECT COUNT(*) FROM users
+WHERE 
+    ($1::text IS NULL OR name ILIKE '%' || $1::text || '%')
+    AND ($2::text IS NULL OR email ILIKE '%' || $2::text || '%') 
+    AND ($3::text IS NULL OR role = $3::text)
+    AND ($4::boolean IS NULL OR email_verified = $4::boolean)
+    AND ($5::timestamp IS NULL OR created_at >= $5::timestamp)
+    AND ($6::timestamp IS NULL OR created_at <= $6::timestamp)
+    AND (
+        $7::text IS NULL 
+        OR name ILIKE '%' || $7::text || '%' 
+        OR email ILIKE '%' || $7::text || '%'
+    )
+`
+
+type CountUsersWithFiltersParams struct {
+	NameFilter          sql.NullString `db:"name_filter" json:"name_filter"`
+	EmailFilter         sql.NullString `db:"email_filter" json:"email_filter"`
+	RoleFilter          sql.NullString `db:"role_filter" json:"role_filter"`
+	EmailVerifiedFilter sql.NullBool   `db:"email_verified_filter" json:"email_verified_filter"`
+	CreatedAfter        sql.NullTime   `db:"created_after" json:"created_after"`
+	CreatedBefore       sql.NullTime   `db:"created_before" json:"created_before"`
+	Search              sql.NullString `db:"search" json:"search"`
+}
+
+func (q *Queries) CountUsersWithFilters(ctx context.Context, arg CountUsersWithFiltersParams) (int64, error) {
+	row := q.queryRow(ctx, q.countUsersWithFiltersStmt, countUsersWithFilters,
+		arg.NameFilter,
+		arg.EmailFilter,
+		arg.RoleFilter,
+		arg.EmailVerifiedFilter,
+		arg.CreatedAfter,
+		arg.CreatedBefore,
+		arg.Search,
+	)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (name, email)
 VALUES ($1, $2)
@@ -283,6 +324,97 @@ type ListUsersParams struct {
 
 func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]Users, error) {
 	rows, err := q.query(ctx, q.listUsersStmt, listUsers, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Users{}
+	for rows.Next() {
+		var i Users
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Email,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.PasswordHash,
+			&i.Role,
+			&i.EmailVerified,
+			&i.EmailVerificationToken,
+			&i.EmailVerificationExpiresAt,
+			&i.PasswordResetToken,
+			&i.PasswordResetExpiresAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listUsersWithPaginationAndFilters = `-- name: ListUsersWithPaginationAndFilters :many
+SELECT id, name, email, created_at, updated_at, password_hash, role, email_verified, email_verification_token, email_verification_expires_at, password_reset_token, password_reset_expires_at FROM users
+WHERE 
+    ($3::text IS NULL OR name ILIKE '%' || $3::text || '%')
+    AND ($4::text IS NULL OR email ILIKE '%' || $4::text || '%') 
+    AND ($5::text IS NULL OR role = $5::text)
+    AND ($6::boolean IS NULL OR email_verified = $6::boolean)
+    AND ($7::timestamp IS NULL OR created_at >= $7::timestamp)
+    AND ($8::timestamp IS NULL OR created_at <= $8::timestamp)
+    AND (
+        $9::text IS NULL 
+        OR name ILIKE '%' || $9::text || '%' 
+        OR email ILIKE '%' || $9::text || '%'
+    )
+ORDER BY
+    CASE WHEN $10::text = 'id' AND $11::text = 'ASC' THEN id END ASC,
+    CASE WHEN $10::text = 'id' AND $11::text = 'DESC' THEN id END DESC,
+    CASE WHEN $10::text = 'name' AND $11::text = 'ASC' THEN name END ASC,
+    CASE WHEN $10::text = 'name' AND $11::text = 'DESC' THEN name END DESC,
+    CASE WHEN $10::text = 'email' AND $11::text = 'ASC' THEN email END ASC,
+    CASE WHEN $10::text = 'email' AND $11::text = 'DESC' THEN email END DESC,
+    CASE WHEN $10::text = 'created_at' AND $11::text = 'ASC' THEN created_at END ASC,
+    CASE WHEN $10::text = 'created_at' AND $11::text = 'DESC' THEN created_at END DESC,
+    CASE WHEN $10::text = 'role' AND $11::text = 'ASC' THEN role END ASC,
+    CASE WHEN $10::text = 'role' AND $11::text = 'DESC' THEN role END DESC,
+    created_at DESC
+LIMIT $1 OFFSET $2
+`
+
+type ListUsersWithPaginationAndFiltersParams struct {
+	Limit               int32          `db:"limit" json:"limit"`
+	Offset              int32          `db:"offset" json:"offset"`
+	NameFilter          sql.NullString `db:"name_filter" json:"name_filter"`
+	EmailFilter         sql.NullString `db:"email_filter" json:"email_filter"`
+	RoleFilter          sql.NullString `db:"role_filter" json:"role_filter"`
+	EmailVerifiedFilter sql.NullBool   `db:"email_verified_filter" json:"email_verified_filter"`
+	CreatedAfter        sql.NullTime   `db:"created_after" json:"created_after"`
+	CreatedBefore       sql.NullTime   `db:"created_before" json:"created_before"`
+	Search              sql.NullString `db:"search" json:"search"`
+	SortField           string         `db:"sort_field" json:"sort_field"`
+	SortOrder           string         `db:"sort_order" json:"sort_order"`
+}
+
+func (q *Queries) ListUsersWithPaginationAndFilters(ctx context.Context, arg ListUsersWithPaginationAndFiltersParams) ([]Users, error) {
+	rows, err := q.query(ctx, q.listUsersWithPaginationAndFiltersStmt, listUsersWithPaginationAndFilters,
+		arg.Limit,
+		arg.Offset,
+		arg.NameFilter,
+		arg.EmailFilter,
+		arg.RoleFilter,
+		arg.EmailVerifiedFilter,
+		arg.CreatedAfter,
+		arg.CreatedBefore,
+		arg.Search,
+		arg.SortField,
+		arg.SortOrder,
+	)
 	if err != nil {
 		return nil, err
 	}
